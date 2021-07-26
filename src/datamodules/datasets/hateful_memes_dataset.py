@@ -49,7 +49,7 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
                 )
         self.samples_frame = self.samples_frame.reset_index(drop=True)
         self.samples_frame.img = self.samples_frame.apply(
-            lambda row: (img_dir / row.img), axis=1
+            lambda row: (Path(img_dir) / row.img), axis=1
         )
 
         # https://github.com/drivendataorg/pandas-path
