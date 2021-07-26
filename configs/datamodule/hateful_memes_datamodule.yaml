@@ -1,7 +1,7 @@
-_target_: src.datamodules.mnist_datamodule.MNISTDataModule
+_target_: src.datamodules.HatefulMemesDataModule
 
 data_dir: ${data_dir} # data_dir is specified in config.yaml
 batch_size: 64
-train_val_test_split: [55_000, 5_000, 10_000]
+train_val_test_split: [800, 100, 100]
 num_workers: 0
 pin_memory: False

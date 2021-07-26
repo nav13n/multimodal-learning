@@ -1,3 +1,4 @@
+from src.datamodules.datasets.hateful_memes_dataset import HatefulMemesDataset
 from typing import Optional, Tuple
 
 from pytorch_lightning import LightningDataModule
@@ -6,7 +7,7 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
 
-class MNISTDataModule(LightningDataModule):
+class HatefulMemesDataModule(LightningDataModule):
     """
     Example of LightningDataModule for MNIST dataset.
 
@@ -27,7 +28,7 @@ class MNISTDataModule(LightningDataModule):
     def __init__(
         self,
         data_dir: str = "data/",
-        train_val_test_split: Tuple[int, int, int] = (55_000, 5_000, 10_000),
+        train_val_test_split: Tuple[int, int, int] = (800, 100, 100),  # TODO: Fix this
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
@@ -35,17 +36,30 @@ class MNISTDataModule(LightningDataModule):
         super().__init__()
 
         self.data_dir = data_dir
+
+        self.train_datapath = (
+            f"{data_dir}/hateful_memes/defaults/annotations/train.jsonl"
+        )
+        self.val_datapath = (
+            f"{data_dir}/hateful_memes/defaults/annotations/dev_seen.jsonl"
+        )
+        self.img_dir = f"{data_dir}/hateful_memes/defaults/images/img"
+
         self.train_val_test_split = train_val_test_split
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
+        # TODO: Handle this
         self.transforms = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+            [
+                transforms.Resize(size=(224, 224)),
+                transforms.ToTensor(),
+            ]
         )
 
         # self.dims is returned when you call datamodule.size()
-        self.dims = (1, 28, 28)
+        self.dims = (1, 224, 224)
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
@@ -53,22 +67,29 @@ class MNISTDataModule(LightningDataModule):
 
     @property
     def num_classes(self) -> int:
-        return 10
+        return 2
 
     def prepare_data(self):
         """Download data if needed. This method is called only from a single GPU.
         Do not use it to assign state (self.x = y)."""
-        MNIST(self.data_dir, train=True, download=True)
-        MNIST(self.data_dir, train=False, download=True)
+        pass
+        # Download the data manually for now. No support for auto download yet
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: self.data_train, self.data_val, self.data_test."""
-        trainset = MNIST(self.data_dir, train=True, transform=self.transforms)
-        testset = MNIST(self.data_dir, train=False, transform=self.transforms)
-        dataset = ConcatDataset(datasets=[trainset, testset])
-        self.data_train, self.data_val, self.data_test = random_split(
-            dataset, self.train_val_test_split
+        self.data_train = HatefulMemesDataset(
+            self.train_datapath,
+            self.img_dir,
+            image_transform=self.transforms,
+            text_transform=None,
         )
+        self.data_val = HatefulMemesDataset(
+            self.val_datapath,
+            self.img_dir,
+            image_transform=self.transforms,
+            text_transform=None,
+        )
+        # TODO: Set test dataset
 
     def train_dataloader(self):
         return DataLoader(
@@ -89,10 +110,11 @@ class MNISTDataModule(LightningDataModule):
         )
 
     def test_dataloader(self):
-        return DataLoader(
-            dataset=self.data_test,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            pin_memory=self.pin_memory,
-            shuffle=False,
-        )
+        # return DataLoader(
+        #     dataset=self.data_test,
+        #     batch_size=self.batch_size,
+        #     num_workers=self.num_workers,
+        #     pin_memory=self.pin_memory,
+        #     shuffle=False,
+        # )
+        raise NotImplementedError()
