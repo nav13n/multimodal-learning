@@ -9,7 +9,7 @@ import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pandas_path 
+import pandas_path
 from PIL import Image
 import torch
 
