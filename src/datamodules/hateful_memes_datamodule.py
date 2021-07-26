@@ -27,7 +27,7 @@ class HatefulMemesDataModule(LightningDataModule):
 
     def __init__(
         self,
-        data_dir: str = "data/",
+        data_dir: str = "data",
         train_val_test_split: Tuple[int, int, int] = (800, 100, 100),  # TODO: Fix this
         batch_size: int = 64,
         num_workers: int = 0,

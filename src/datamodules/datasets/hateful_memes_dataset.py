@@ -9,13 +9,9 @@ import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pandas_path  # Path style access for pandas
-from tqdm import tqdm
-
-
+import pandas_path 
+from PIL import Image
 import torch
-import torchvision
-import fasttext
 
 
 class HatefulMemesDataset(torch.utils.data.Dataset):
@@ -52,11 +48,12 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
             lambda row: (Path(img_dir) / row.img), axis=1
         )
 
-        # https://github.com/drivendataorg/pandas-path
-        if not self.samples_frame.img.path.exists().all():
-            raise FileNotFoundError
-        if not self.samples_frame.img.path.is_file().all():
-            raise TypeError
+        # print(self.samples_frame.img)
+        # # https://github.com/drivendataorg/pandas-path
+        # if not self.samples_frame.img.path.exists().all():
+        #     raise FileNotFoundError
+        # if not self.samples_frame.img.path.is_file().all():
+        #     raise TypeError
 
         self.image_transform = image_transform
         self.text_transform = text_transform
