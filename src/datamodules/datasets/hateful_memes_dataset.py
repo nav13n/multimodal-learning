@@ -13,6 +13,8 @@ import pandas_path
 from PIL import Image
 import torch
 
+from torch.nn.utils.rnn import pad_sequence
+
 
 class HatefulMemesDataset(torch.utils.data.Dataset):
     """Uses jsonl data to preprocess and serve
@@ -89,3 +91,11 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
             sample = {"id": img_id, "image": image, "text": text}
 
         return sample
+
+
+def collate(batch):
+    img_tensor = pad_sequence([i["image"] for i in batch])
+    text_tensor = pad_sequence([i["text"] for i in batch])
+    label_tensor = torch.Tensor([i["label"] for i in batch])
+
+    return img_tensor, text_tensor, label_tensor

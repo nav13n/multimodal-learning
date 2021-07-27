@@ -1,4 +1,4 @@
-from src.datamodules.datasets.hateful_memes_dataset import HatefulMemesDataset
+from src.datamodules.datasets.hateful_memes_dataset import HatefulMemesDataset, collate
 from typing import Optional, Tuple
 
 import fasttext
@@ -101,6 +101,7 @@ class HatefulMemesDataModule(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            collate_fn=collate,
             shuffle=True,
         )
 
@@ -110,6 +111,7 @@ class HatefulMemesDataModule(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            collate_fn=collate,
             shuffle=False,
         )
 
