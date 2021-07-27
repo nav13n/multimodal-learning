@@ -29,3 +29,7 @@ file called `text_embedding.bin` under `data/` directory.
 ### Training
 
 Run `python run.py`
+
+### References
+
+1. `ConcatModel` is based on the baseline provided by DrivenData [here](https://www.drivendata.co/blog/hateful-memes-benchmark/).
