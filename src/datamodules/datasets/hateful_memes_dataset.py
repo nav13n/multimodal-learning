@@ -94,8 +94,8 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
 
 
 def collate(batch):
-    img_tensor = pad_sequence([i["image"] for i in batch])
-    text_tensor = pad_sequence([i["text"] for i in batch])
-    label_tensor = torch.Tensor([i["label"] for i in batch])
+    img_tensor = pad_sequence([i["image"] for i in batch], batch_first=True)
+    text_tensor = pad_sequence([i["text"] for i in batch], batch_first=True)
+    label_tensor = torch.LongTensor([i["label"] for i in batch])
 
     return img_tensor, text_tensor, label_tensor

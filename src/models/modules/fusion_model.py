@@ -3,24 +3,24 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 
+import torchmetrics
 from pytorch_lightning import LightningModule
 
 
 class LanguageModule(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, output_dim):
+    def __init__(self, embedding_dim, output_dim):
         super().__init__()
-        self.embed = nn.Embedding(vocab_size, embedding_dim)
         self.fc = nn.Linear(embedding_dim, output_dim)
 
     def forward(self, text):
-        return F.relu(self.fc(self.embed(text)))
+        return F.relu(self.fc(text))
 
 
 class VisionModule(nn.Module):
-    def __init__(self, output_dim):
+    def __init__(self, backbone_output_dim, output_dim):
         super().__init__()
         self.backbone = torchvision.models.resnet18(pretrained=True)
-        self.fc = nn.Linear(2048, output_dim)
+        self.fc = nn.Linear(backbone_output_dim, output_dim)
 
     def forward(self, image):
         return F.relu(self.fc(self.backbone(image)))
@@ -29,8 +29,8 @@ class VisionModule(nn.Module):
 class ConcatModel(nn.Module):
     def __init__(
         self,
-        vocab_size,
         embedding_dim,
+        backbone_output_dim,
         language_feature_dim,
         vision_feature_dim,
         fusion_output_size,
@@ -39,10 +39,8 @@ class ConcatModel(nn.Module):
     ):
         super().__init__()
 
-        self.language_module = LanguageModule(
-            vocab_size, embedding_dim, language_feature_dim
-        )
-        self.vision_module = VisionModule(vision_feature_dim)
+        self.language_module = LanguageModule(embedding_dim, language_feature_dim)
+        self.vision_module = VisionModule(backbone_output_dim, vision_feature_dim)
 
         self.fusion = nn.Linear(
             in_features=(language_feature_dim + vision_feature_dim),
@@ -66,8 +64,8 @@ class ConcatModel(nn.Module):
 class LanguageAndVisionConcat(LightningModule):
     def __init__(
         self,
-        vocab_size,
         embedding_dim,
+        backbone_output_dim,
         language_feature_dim,
         vision_feature_dim,
         fusion_output_size,
@@ -79,8 +77,8 @@ class LanguageAndVisionConcat(LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.model = ConcatModel(
-            vocab_size,
             embedding_dim,
+            backbone_output_dim,
             language_feature_dim,
             vision_feature_dim,
             fusion_output_size,
@@ -88,37 +86,34 @@ class LanguageAndVisionConcat(LightningModule):
             num_classes=num_classes,
         )
         self.loss_fn = nn.CrossEntropyLoss()
+        self.train_accuracy = torchmetrics.Accuracy()
+        self.val_accuracy = torchmetrics.Accuracy()
 
     def forward(self, text, image, label=None):
         return self.model(text, image, label)
 
     def training_step(self, batch, batch_idx):
-        text, image, label = batch
-        pred = self.model(text, image, label)
+        image, text, label = batch
+        pred = self.model(text, image)
+
         loss = self.loss_fn(pred, label)
-        self.log(
-            "train_loss",
-            loss,
-            prog_bar=True,
-            on_step=True,
-            on_epoch=True,
-            sync_dist=True,
-        )
+        acc = self.train_accuracy(pred, label)
+
+        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+
         return loss
 
     def validation_step(self, batch, batch_idx):
-        text, image, label = batch
-        pred = self.model(text, image, label)
-        loss = self.loss_fn(pred, label)
-        self.log(
-            "val_loss", loss, prog_bar=True, on_step=True, on_epoch=True, sync_dist=True
-        )
-        return loss
+        image, text, label = batch
+        pred = self.model(text, image)
 
-    def validation_epoch_end(self, outputs):
-        avg_loss = torch.stack(tuple(output for output in outputs)).mean()
-        self.log("val_loss", avg_loss)
-        return avg_loss
+        loss = self.loss_fn(pred, label)
+        acc = self.val_accuracy(pred, label)
+
+        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+        return loss
 
     def configure_optimizers(self):
         return torch.optim.Adam(
