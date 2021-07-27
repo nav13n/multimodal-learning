@@ -1,6 +1,8 @@
 from src.datamodules.datasets.hateful_memes_dataset import HatefulMemesDataset
 from typing import Optional, Tuple
 
+import fasttext
+
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.datasets import MNIST
@@ -44,6 +46,7 @@ class HatefulMemesDataModule(LightningDataModule):
             f"{data_dir}/hateful_memes/defaults/annotations/dev_seen.jsonl"
         )
         self.img_dir = f"{data_dir}/hateful_memes/defaults/images"
+        self.text_embedding_model = f"{data_dir}/text_embedding.bin"
 
         self.train_val_test_split = train_val_test_split
         self.batch_size = batch_size
@@ -51,12 +54,13 @@ class HatefulMemesDataModule(LightningDataModule):
         self.pin_memory = pin_memory
 
         # TODO: Handle this
-        self.transforms = transforms.Compose(
+        self.image_transforms = transforms.Compose(
             [
                 transforms.Resize(size=(224, 224)),
                 transforms.ToTensor(),
             ]
         )
+        self.text_transform = fasttext.load_model(self.text_embedding_model)
 
         # self.dims is returned when you call datamodule.size()
         self.dims = (1, 224, 224)
@@ -80,14 +84,14 @@ class HatefulMemesDataModule(LightningDataModule):
         self.data_train = HatefulMemesDataset(
             self.train_datapath,
             self.img_dir,
-            image_transform=self.transforms,
-            text_transform=None,
+            image_transform=self.image_transforms,
+            text_transform=self.text_transform,
         )
         self.data_val = HatefulMemesDataset(
             self.val_datapath,
             self.img_dir,
-            image_transform=self.transforms,
-            text_transform=None,
+            image_transform=self.image_transforms,
+            text_transform=self.text_transform,
         )
         # TODO: Set test dataset
 
