@@ -1,1 +1,2 @@
 from .hateful_memes_dataset import HatefulMemesDataset
+from .semi_hateful_memes_dataset import SemiHatefulMemesDataset
