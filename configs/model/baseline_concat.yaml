@@ -1,4 +1,4 @@
-_target_: src.models.LanguageAndVisionConcat
+_target_: src.models.SemiLanguageAndVisionConcat
 
 embedding_dim: 100
 language_feature_dim: 256

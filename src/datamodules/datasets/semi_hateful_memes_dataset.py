@@ -23,16 +23,18 @@ class SemiHatefulMemesDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        data_path,
+        data,
         img_dir,
+        idxs,
         image_transform,
         text_transform,
+        text_encoder,
         balance=False,
         dev_limit=None,
         random_state=0,
     ):
 
-        self.samples_frame = pd.read_json(data_path, lines=True)
+        self.samples_frame = data.iloc[idxs]
         self.dev_limit = dev_limit
         if balance:
             neg = self.samples_frame[self.samples_frame.label.eq(0)]
@@ -59,6 +61,7 @@ class SemiHatefulMemesDataset(torch.utils.data.Dataset):
 
         self.image_transform = image_transform
         self.text_transform = text_transform
+        self.text_encoder = text_encoder
 
     def __len__(self):
         """This method is called when you do len(instance)
@@ -77,10 +80,17 @@ class SemiHatefulMemesDataset(torch.utils.data.Dataset):
 
         image = Image.open(self.samples_frame.loc[idx, "img"]).convert("RGB")
         image = self.image_transform(image)
+        
+        text = self.samples_frame.loc[idx, "text"]
+        if self.text_transform is not None:
+            text = self.text_transform(text)
+            
+        if type(text) is tuple:
+            text = (torch.Tensor(self.text_encoder.get_sentence_vector(text[0])).squeeze(), \
+                torch.Tensor(self.text_encoder.get_sentence_vector(text[1])).squeeze())
+        else:
+            text = torch.Tensor(self.text_encoder.get_sentence_vector(text)).squeeze()
 
-        text = torch.Tensor(
-            self.text_transform.get_sentence_vector(self.samples_frame.loc[idx, "text"])
-        ).squeeze()
 
         if "label" in self.samples_frame.columns:
             label = (
@@ -94,8 +104,23 @@ class SemiHatefulMemesDataset(torch.utils.data.Dataset):
 
 
 def collate(batch):
-    img_tensor = pad_sequence([i["image"] for i in batch], batch_first=True)
-    text_tensor = pad_sequence([i["text"] for i in batch], batch_first=True)
-    label_tensor = torch.LongTensor([i["label"] for i in batch])
 
-    return img_tensor, text_tensor, label_tensor
+    img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, label_tensor = None, None, None, None, None
+    
+    # TODO Clean it up. Getting messy!
+    if type(batch[0]["image"]) is tuple:
+
+        img_tensor_w = pad_sequence([i["image"][0] for i in batch], batch_first=True)
+        img_tensor_s = pad_sequence([i["image"][1] for i in batch], batch_first=True)
+        text_tensor_w = pad_sequence([i["text"][0] for i in batch], batch_first=True)
+        text_tensor_s = pad_sequence([i["text"][1] for i in batch], batch_first=True)
+
+        return img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s
+
+    else:
+
+        img_tensor_w = pad_sequence([i["image"] for i in batch], batch_first=True)
+        text_tensor_w = pad_sequence([i["text"] for i in batch], batch_first=True)
+        label_tensor = torch.LongTensor([i["label"] for i in batch])
+
+        return img_tensor_w, text_tensor_w, label_tensor

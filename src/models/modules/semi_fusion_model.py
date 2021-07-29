@@ -56,12 +56,11 @@ class ConcatModel(nn.Module):
         combined = torch.cat([text_features, image_features], dim=1)
         fused = self.dropout(torch.nn.functional.relu(self.fusion(combined)))
         logits = self.fc(fused)
-        pred = F.softmax(logits)
+      
+        return logits
 
-        return pred
 
-
-class LanguageAndVisionConcat(LightningModule):
+class SemiLanguageAndVisionConcat(LightningModule):
     def __init__(
         self,
         embedding_dim,
@@ -73,6 +72,9 @@ class LanguageAndVisionConcat(LightningModule):
         num_classes=2,
         lr=0.0003,
         weight_decay=0.00005,
+        T=1,
+        threshold=0.95,
+        lambda_s = 1
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -88,23 +90,51 @@ class LanguageAndVisionConcat(LightningModule):
         self.loss_fn = nn.CrossEntropyLoss()
         self.train_accuracy = torchmetrics.Accuracy()
         self.val_accuracy = torchmetrics.Accuracy()
+        self.T = T
+        self.threshold = threshold
+        self.lambda_s = lambda_s
+
 
     def forward(self, text, image, label=None):
         return self.model(text, image, label)
 
     def training_step(self, batch, batch_idx):
+        labeled, unlabeled = batch
 
-        
-        image, text, label = batch
-        pred = self.model(text, image)
-
-        loss = self.loss_fn(pred, label)
+        image, text, label = labeled
+        img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s = unlabeled
+       
+        # Actual Image Loss 
+        logits = self.model(text, image)
+        pred = F.softmax(logits)
+        loss = F.cross_entropy(logits, label, reduction='mean')
+     
         acc = self.train_accuracy(pred, label)
 
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
-        return loss
+        #TODO All three can be inferred at once with some tensor magic
+
+        # Weak Aug Loss 
+        logits_w = self.model(text_tensor_w, img_tensor_w)
+
+        loss_w = self.loss_fn(pred, label)
+
+        pseudo_label = torch.softmax(logits_w.detach()/self.T, dim=-1)
+        max_probs, label_s = torch.max(pseudo_label, dim=-1)
+        mask = max_probs.ge(self.threshold).float()
+
+        # Strong Aug Loss
+        logits_s = self.model(text_tensor_s, img_tensor_s)
+        loss_s = (F.cross_entropy(logits_s, label_s,
+                                  reduction='none') * mask).mean()
+
+        self.log("train/loss_s", loss, on_step=False, on_epoch=True, prog_bar=False)
+        
+        total_loss = loss + self.lambda_s * loss_s
+
+        return total_loss
 
     def validation_step(self, batch, batch_idx):
         image, text, label = batch

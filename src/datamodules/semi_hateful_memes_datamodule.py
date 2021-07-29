@@ -1,4 +1,5 @@
 from src.datamodules.datasets.semi_hateful_memes_dataset import SemiHatefulMemesDataset, collate
+from .fixmatch_transform import FixMatchImageTransform, FixMatchTextTransform
 from typing import Optional, Tuple
 
 import fasttext
@@ -38,7 +39,10 @@ class SemiHatefulMemesDataModule(LightningDataModule):
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
-        num_labeled: int = 100
+        num_labeled: int = 100,
+        expand_labels: bool = True,
+        eval_step: int = 10
+
     ):
         super().__init__()
 
@@ -58,6 +62,8 @@ class SemiHatefulMemesDataModule(LightningDataModule):
         self.num_workers = num_workers
         self.pin_memory = pin_memory
         self.num_labeled = num_labeled
+        self.expand_labels = expand_labels
+        self.eval_step = eval_step 
 
         # TODO: Handle this
         self.image_transforms = transforms.Compose(
@@ -66,7 +72,7 @@ class SemiHatefulMemesDataModule(LightningDataModule):
                 transforms.ToTensor(),
             ]
         )
-        self.text_transform = fasttext.load_model(self.text_embedding_model)
+        self.text_encoder = fasttext.load_model(self.text_embedding_model)
 
         # self.dims is returned when you call datamodule.size()
         self.dims = (1, 224, 224)
@@ -99,37 +105,61 @@ class SemiHatefulMemesDataModule(LightningDataModule):
         self.val_samples = pd.read_json(self.val_datapath, lines=True)
 
         # Get the labels from the dataframe
-        train_labels = self.train_samples['label'].to_numpy()
-        print(train_labels.shape)
+        train_labels = self.train_samples['label'].to_numpy().reshape(-1)
 
         # Split the train data into into labeled and unlabeled indexes
+        labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
+        val_idxs = np.array(range(self.val_samples.label.shape[0]))
 
-
-
-        
-        self.data_train = SemiHatefulMemesDataset(
-            self.train_datapath,
-            self.img_dir,
+ 
+        self.data_train_labeled = SemiHatefulMemesDataset(
+            data=self.train_samples,
+            img_dir=self.img_dir,
+            idxs=labeled_idxs,
             image_transform=self.image_transforms,
-            text_transform=self.text_transform,
+            text_transform=None,
+            text_encoder=self.text_encoder
         )
+
+        self.data_train_unlabeled = SemiHatefulMemesDataset(
+            data=self.train_samples,
+            img_dir=self.img_dir,
+            idxs=unlabeled_idxs,
+            image_transform=FixMatchImageTransform(self.image_transforms),
+            text_transform=FixMatchTextTransform(trfms=None),
+            text_encoder=self.text_encoder
+        )
+
         self.data_val = SemiHatefulMemesDataset(
-            self.val_datapath,
-            self.img_dir,
+            data=self.val_samples,
+            img_dir=self.img_dir,
+            idxs=val_idxs,
             image_transform=self.image_transforms,
-            text_transform=self.text_transform,
+            text_transform=None,
+            text_encoder=self.text_encoder
         )
         # TODO: Set test dataset
 
     def train_dataloader(self):
-        return DataLoader(
-            dataset=self.data_train,
+        
+        train_labeled_dataloader = DataLoader(
+            dataset=self.data_train_labeled,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
             collate_fn=collate,
             shuffle=True,
         )
+
+        train_unlabeled_dataloader = DataLoader(
+            dataset=self.data_train_unlabeled,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+            collate_fn=collate,
+            shuffle=True,
+        )
+        return train_labeled_dataloader, train_unlabeled_dataloader
 
     def val_dataloader(self):
         return DataLoader(
