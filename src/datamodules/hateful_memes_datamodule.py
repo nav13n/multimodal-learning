@@ -42,13 +42,9 @@ class HatefulMemesDataModule(LightningDataModule):
 
         self.data_dir = data_dir
 
-        self.train_datapath = (
-            f"{data_dir}/hateful_memes/defaults/annotations/train.jsonl"
-        )
-        self.val_datapath = (
-            f"{data_dir}/hateful_memes/defaults/annotations/dev_seen.jsonl"
-        )
-        self.img_dir = f"{data_dir}/hateful_memes/defaults/images"
+        self.train_datapath = f"{data_dir}/hateful_memes/train.jsonl"
+        self.val_datapath = f"{data_dir}/hateful_memes/dev_seen.jsonl"
+        self.img_dir = f"{data_dir}/hateful_memes"
 
         self.train_val_test_split = train_val_test_split
         self.batch_size = batch_size
