@@ -14,7 +14,7 @@ Install dependencies:
 Data can be downloaded from the below links
 
 1. [A tiny version of the dataset for debuggin purposes](https://drive.google.com/file/d/1tOxKetKwSB8Begw9t73KidWYqaI8QO0T/view?usp=sharing)
-2. [Original]()
+2. [Original](https://hatefulmemeschallenge.com/#about)
 
 Unzip and place it under `data/` directory.
 
@@ -33,3 +33,4 @@ Run `python run.py`
 ### References
 
 1. `ConcatModel` is based on the baseline provided by DrivenData [here](https://www.drivendata.co/blog/hateful-memes-benchmark/).
+
