@@ -157,7 +157,7 @@ class LanguageAndVisionConcat(LightningModule):
     def training_step(self, batch, batch_idx):
 
         image, text, label = batch
-        pred = self.model(text, image)
+        logits, pred = self.model(text, image)
 
         loss = self.loss_fn(pred, label)
         acc = self.train_accuracy(pred, label)
@@ -171,7 +171,7 @@ class LanguageAndVisionConcat(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         image, text, label = batch
-        pred = self.model(text, image)
+        logits, pred = self.model(text, image)
 
         loss = self.loss_fn(pred, label)
         acc = self.val_accuracy(pred, label)
