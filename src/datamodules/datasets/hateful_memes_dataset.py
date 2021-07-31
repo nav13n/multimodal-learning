@@ -114,15 +114,13 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
                 text_input,
                 return_tensors="pt",
                 return_attention_mask=False,
-                return_token_type=False,
+                return_token_type_ids=False,
             )
             return tokenized_text["input_ids"].squeeze()
 
 
 def collate(batch):
     img_tensor = pad_sequence([i["image"] for i in batch], batch_first=True)
-    for i in batch:
-        print(i["text"].shape)
     text_tensor = pad_sequence([i["text"] for i in batch], batch_first=True)
     label_tensor = torch.LongTensor([i["label"] for i in batch])
 
