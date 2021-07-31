@@ -28,7 +28,10 @@ file called `text_embedding.bin` under `data/` directory.
 
 ### Training
 
-Run `python run.py`
+If `python run.py` command is run, the default config in `config.yaml` is used for running the training expeirment. Specific experiments are configured under `configs/experiments` directory, which can be run as below:
+
+#### Concat BERT
+Run `python run.py experiment=concat_bert datamodule.num_workers=12 datamodule.batch_size=256`
 
 ### References
 
