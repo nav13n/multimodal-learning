@@ -129,7 +129,7 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
                 attention_mask=encoding['attention_mask']
             )
             text = out["pooler_output"].squeeze()
-            print(text.shape)
+            #print(text.shape)
 
         if "label" in self.samples_frame.columns:
             label = (
