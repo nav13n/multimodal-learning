@@ -14,12 +14,10 @@ PRE_TRAINED_BERT = "bert-base-uncased"
 class LanguageModule(nn.Module):
     def __init__(self, embedding_dim, output_dim):
         super().__init__()
-        self.bert = BertModel.from_pretrained(PRE_TRAINED_BERT)
         self.fc = nn.Linear(embedding_dim, output_dim)
 
     def forward(self, text):
-        text_features = self.bert(text)
-        return F.relu(self.fc(text_features.pooler_output))
+        return F.relu(self.fc(text))
 
 
 class VisionModule(nn.Module):
@@ -80,6 +78,8 @@ class ConcatBert(nn.Module):
     ):
         super().__init__()
 
+        self.bert = BertModel.from_pretrained(PRE_TRAINED_BERT)
+
         self.language_module = LanguageModule(embedding_dim, language_feature_dim)
         self.vision_module = VisionModule(backbone_output_dim, vision_feature_dim)
 
@@ -91,7 +91,8 @@ class ConcatBert(nn.Module):
         self.dropout = nn.Dropout(dropout_p)
 
     def forward(self, text, image):
-        text_features = self.language_module(text)
+        text_features = self.bert(text)
+        text_features = self.language_module(text_features.pooler_output)
         text_features = F.relu(text_features)
         image_features = F.relu(self.vision_module(image))
 
@@ -147,6 +148,8 @@ class LanguageAndVisionConcat(LightningModule):
         self.loss_fn = nn.CrossEntropyLoss()
         self.train_accuracy = torchmetrics.Accuracy()
         self.val_accuracy = torchmetrics.Accuracy()
+        self.train_auroc = torchmetrics.AUROC(2)
+        self.val_auroc = torchmetrics.AUROC(2)
 
     def forward(self, text, image, label=None):
         return self.model(text, image, label)
@@ -158,9 +161,11 @@ class LanguageAndVisionConcat(LightningModule):
 
         loss = self.loss_fn(pred, label)
         acc = self.train_accuracy(pred, label)
+        auroc = self.train_auroc(pred, label)
 
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/auroc", auroc, on_step=False, on_epoch=True, prog_bar=True)
 
         return loss
 
@@ -170,9 +175,11 @@ class LanguageAndVisionConcat(LightningModule):
 
         loss = self.loss_fn(pred, label)
         acc = self.val_accuracy(pred, label)
+        auroc = self.val_auroc(pred, label)
 
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/auroc", auroc, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
