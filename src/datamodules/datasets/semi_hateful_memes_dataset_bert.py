@@ -88,36 +88,7 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
         if type(text) is tuple:
             encoding = tokenizer.encode_plus(
               text[0],
-              max_length=512,
-              add_special_tokens=True, # Add '[CLS]' and '[SEP]'
-              return_token_type_ids=False,
-              pad_to_max_length=True,
-              return_attention_mask=True,
-              return_tensors='pt',  # Return PyTorch tensors
-            )
-            last_hidden_state, pooled_output = bert_model(
-                input_ids=encoding['input_ids'],
-                attention_mask=encoding['attention_mask']
-            )
-            temp = pooled_output.squeeze()
-            encoding = tokenizer.encode_plus(
-              text[1],
-              max_length=512,
-              add_special_tokens=True, # Add '[CLS]' and '[SEP]'
-              return_token_type_ids=False,
-              pad_to_max_length=True,
-              return_attention_mask=True,
-              return_tensors='pt',  # Return PyTorch tensors
-            )
-            last_hidden_state, pooled_output = bert_model(
-                input_ids=encoding['input_ids'],
-                attention_mask=encoding['attention_mask']
-            )
-            text = (temp,pooled_output.squeeze())
-        else:
-            encoding = tokenizer.encode_plus(
-              text,
-              max_length=512,
+              max_length=32,
               add_special_tokens=True, # Add '[CLS]' and '[SEP]'
               return_token_type_ids=False,
               pad_to_max_length=True,
@@ -128,7 +99,37 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
                 input_ids=encoding['input_ids'],
                 attention_mask=encoding['attention_mask']
             )
-            text = out[1].squeeze() if type(out) is tuple else out["pooler_output"].squeeze()
+            temp = out[-1].squeeze() if type(out) is tuple else out["pooler_output"].squeeze()
+            encoding = tokenizer.encode_plus(
+              text[1],
+              max_length=32,
+              add_special_tokens=True, # Add '[CLS]' and '[SEP]'
+              return_token_type_ids=False,
+              pad_to_max_length=True,
+              return_attention_mask=True,
+              return_tensors='pt',  # Return PyTorch tensors
+            )
+            out = bert_model(
+                input_ids=encoding['input_ids'],
+                attention_mask=encoding['attention_mask']
+            )
+            temp2=out[-1].squeeze() if type(out) is tuple else out["pooler_output"].squeeze()
+            text = (temp,temp2)
+        else:
+            encoding = tokenizer.encode_plus(
+              text,
+              max_length=32,
+              add_special_tokens=True, # Add '[CLS]' and '[SEP]'
+              return_token_type_ids=False,
+              pad_to_max_length=True,
+              return_attention_mask=True,
+              return_tensors='pt',  # Return PyTorch tensors
+            )
+            out = bert_model(
+                input_ids=encoding['input_ids'],
+                attention_mask=encoding['attention_mask']
+            )
+            text = out[-1].squeeze() if type(out) is tuple else out["pooler_output"].squeeze()
             #print(text.shape)
 
         if "label" in self.samples_frame.columns:

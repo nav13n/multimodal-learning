@@ -75,7 +75,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
                 transforms.ToTensor(),
             ]
         )
-        PRE_TRAINED_MODEL_NAME='bert-base-cased'
+        PRE_TRAINED_MODEL_NAME='bert-base-uncased'
         tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
         
         bert_model = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
