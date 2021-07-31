@@ -41,3 +41,4 @@ pudb            # debugger
 
 pandas_path
 fasttext
+transformers
