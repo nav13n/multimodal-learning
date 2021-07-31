@@ -234,9 +234,11 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
         loss = F.cross_entropy(logits, label, reduction="mean")
 
         acc = self.train_accuracy(pred, label)
+        auroc = self.train_auroc(pred, label)
 
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/auroc", auroc, on_step=False, on_epoch=True, prog_bar=True)
 
         # TODO All three can be inferred at once with some tensor magic
 
@@ -258,14 +260,3 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
         total_loss = loss + self.lambda_s * loss_s
 
         return total_loss
-
-    def validation_step(self, batch, batch_idx):
-        image, text, label = batch
-        logits, pred = self.model(text, image)
-
-        loss = self.loss_fn(pred, label)
-        acc = self.val_accuracy(pred, label)
-
-        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-        self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
-        return loss
