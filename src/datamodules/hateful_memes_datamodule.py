@@ -30,12 +30,15 @@ class HatefulMemesDataModule(LightningDataModule):
     def __init__(
         self,
         data_dir: str = "data",
+        text_embedding_type: str = "fasttext",
         train_val_test_split: Tuple[int, int, int] = (800, 100, 100),  # TODO: Fix this
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
     ):
         super().__init__()
+
+        assert text_embedding_type in ["fasttext", "bert"]
 
         self.data_dir = data_dir
 
@@ -46,24 +49,18 @@ class HatefulMemesDataModule(LightningDataModule):
             f"{data_dir}/hateful_memes/defaults/annotations/dev_seen.jsonl"
         )
         self.img_dir = f"{data_dir}/hateful_memes/defaults/images"
-        self.text_embedding_model = f"{data_dir}/text_embedding.bin"
 
         self.train_val_test_split = train_val_test_split
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
-        # TODO: Handle this
-        self.image_transforms = transforms.Compose(
-            [
-                transforms.Resize(size=(224, 224)),
-                transforms.ToTensor(),
-            ]
-        )
-        self.text_transform = fasttext.load_model(self.text_embedding_model)
+        self.text_embedding_type = text_embedding_type
 
-        # self.dims is returned when you call datamodule.size()
-        self.dims = (1, 224, 224)
+        if self.text_embedding_type == "fasttext":
+            self.text_embedding_model = f"{data_dir}/text_embedding.bin"
+        else:
+            self.text_embedding_model = "bert-base-uncased"
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
@@ -84,14 +81,14 @@ class HatefulMemesDataModule(LightningDataModule):
         self.data_train = HatefulMemesDataset(
             self.train_datapath,
             self.img_dir,
-            image_transform=self.image_transforms,
-            text_transform=self.text_transform,
+            self.text_embedding_model,
+            self.text_embedding_type,
         )
         self.data_val = HatefulMemesDataset(
             self.val_datapath,
             self.img_dir,
-            image_transform=self.image_transforms,
-            text_transform=self.text_transform,
+            self.text_embedding_model,
+            self.text_embedding_type,
         )
         # TODO: Set test dataset
 

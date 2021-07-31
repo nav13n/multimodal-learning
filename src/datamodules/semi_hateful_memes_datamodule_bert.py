@@ -1,4 +1,7 @@
-from src.datamodules.datasets.semi_hateful_memes_dataset_bert import SemiHatefulMemesDatasetBERT, collate
+from src.datamodules.datasets.semi_hateful_memes_dataset_bert import (
+    SemiHatefulMemesDatasetBERT,
+    collate,
+)
 from .fixmatch_transform import FixMatchImageTransform, FixMatchTextTransform
 from typing import Optional, Tuple
 
@@ -12,10 +15,8 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
-from transformers import (
-    BertModel,
-    BertTokenizer
-)
+from transformers import BertModel, BertTokenizer
+
 
 class SemiHatefulMemesDataModuleBERT(LightningDataModule):
     """
@@ -44,8 +45,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
         pin_memory: bool = False,
         num_labeled: int = 100,
         expand_labels: bool = True,
-        eval_step: int = 10
-
+        eval_step: int = 10,
     ):
         super().__init__()
 
@@ -66,7 +66,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
         self.pin_memory = pin_memory
         self.num_labeled = num_labeled
         self.expand_labels = expand_labels
-        self.eval_step = eval_step 
+        self.eval_step = eval_step
 
         # TODO: Handle this
         self.image_transforms = transforms.Compose(
@@ -75,12 +75,12 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
                 transforms.ToTensor(),
             ]
         )
-        PRE_TRAINED_MODEL_NAME='bert-base-cased'
+        PRE_TRAINED_MODEL_NAME = "bert-base-cased"
         tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
-        
+
         bert_model = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
-        
-        self.text_encoder = (tokenizer,bert_model)
+
+        self.text_encoder = (tokenizer, bert_model)
 
         # self.dims is returned when you call datamodule.size()
         self.dims = (1, 224, 224)
@@ -104,29 +104,28 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: self.data_train, self.data_val, self.data_test."""
-        
+
         # TODO Clean it up after making it work
-        # Load the data here instead of Dataset 
-        
+        # Load the data here instead of Dataset
+
         # Load training data
         self.train_samples = pd.read_json(self.train_datapath, lines=True)
         self.val_samples = pd.read_json(self.val_datapath, lines=True)
 
         # Get the labels from the dataframe
-        train_labels = self.train_samples['label'].to_numpy().reshape(-1)
+        train_labels = self.train_samples["label"].to_numpy().reshape(-1)
 
         # Split the train data into into labeled and unlabeled indexes
         labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
         val_idxs = np.array(range(self.val_samples.label.shape[0]))
 
- 
         self.data_train_labeled = SemiHatefulMemesDatasetBERT(
             data=self.train_samples,
             img_dir=self.img_dir,
             idxs=labeled_idxs,
             image_transform=self.image_transforms,
             text_transform=None,
-            text_encoder=self.text_encoder
+            text_encoder=self.text_encoder,
         )
 
         self.data_train_unlabeled = SemiHatefulMemesDatasetBERT(
@@ -135,7 +134,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             idxs=unlabeled_idxs,
             image_transform=FixMatchImageTransform(self.image_transforms),
             text_transform=FixMatchTextTransform(trfms=None),
-            text_encoder=self.text_encoder
+            text_encoder=self.text_encoder,
         )
 
         self.data_val = SemiHatefulMemesDatasetBERT(
@@ -144,12 +143,12 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             idxs=val_idxs,
             image_transform=self.image_transforms,
             text_transform=None,
-            text_encoder=self.text_encoder
+            text_encoder=self.text_encoder,
         )
         # TODO: Set test dataset
 
     def train_dataloader(self):
-        
+
         train_labeled_dataloader = DataLoader(
             dataset=self.data_train_labeled,
             batch_size=self.batch_size,
@@ -206,7 +205,8 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
 
         if self.expand_labels or self.num_labeled < self.batch_size:
             num_expand_x = math.ceil(
-                self.batch_size * self.eval_step / self.num_labeled)
+                self.batch_size * self.eval_step / self.num_labeled
+            )
             labeled_idx = np.hstack([labeled_idx for _ in range(num_expand_x)])
         np.random.shuffle(labeled_idx)
         return labeled_idx, unlabeled_idx

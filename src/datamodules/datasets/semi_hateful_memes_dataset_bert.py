@@ -80,56 +80,56 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
 
         image = Image.open(self.samples_frame.loc[idx, "img"]).convert("RGB")
         image = self.image_transform(image)
-        
+
         text = self.samples_frame.loc[idx, "text"]
         if self.text_transform is not None:
             text = self.text_transform(text)
-        (tokenizer,bert_model) = self.text_encoder            
+        (tokenizer, bert_model) = self.text_encoder
         if type(text) is tuple:
             encoding = tokenizer.encode_plus(
-              text[0],
-              max_length=512,
-              add_special_tokens=True, # Add '[CLS]' and '[SEP]'
-              return_token_type_ids=False,
-              pad_to_max_length=True,
-              return_attention_mask=True,
-              return_tensors='pt',  # Return PyTorch tensors
+                text[0],
+                max_length=512,
+                add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
+                return_token_type_ids=False,
+                pad_to_max_length=True,
+                return_attention_mask=True,
+                return_tensors="pt",  # Return PyTorch tensors
             )
             last_hidden_state, pooled_output = bert_model(
-                input_ids=encoding['input_ids'].squeeze(),
-                attention_mask=encoding['attention_mask'].squeeze()
+                input_ids=encoding["input_ids"].squeeze(),
+                attention_mask=encoding["attention_mask"].squeeze(),
             )
             text[0] = pooled_output.squeeze()
             encoding = tokenizer.encode_plus(
-              text[1],
-              max_length=512,
-              add_special_tokens=True, # Add '[CLS]' and '[SEP]'
-              return_token_type_ids=False,
-              pad_to_max_length=True,
-              return_attention_mask=True,
-              return_tensors='pt',  # Return PyTorch tensors
+                text[1],
+                max_length=512,
+                add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
+                return_token_type_ids=False,
+                pad_to_max_length=True,
+                return_attention_mask=True,
+                return_tensors="pt",  # Return PyTorch tensors
             )
             last_hidden_state, pooled_output = bert_model(
-                input_ids=encoding['input_ids'].squeeze(),
-                attention_mask=encoding['attention_mask'].squeeze()
+                input_ids=encoding["input_ids"].squeeze(),
+                attention_mask=encoding["attention_mask"].squeeze(),
             )
             text[1] = pooled_output.squeeze()
         else:
             encoding = tokenizer.encode_plus(
-              text,
-              max_length=512,
-              add_special_tokens=True, # Add '[CLS]' and '[SEP]'
-              return_token_type_ids=False,
-              pad_to_max_length=True,
-              return_attention_mask=True,
-              return_tensors='pt',  # Return PyTorch tensors
+                text,
+                max_length=512,
+                add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
+                return_token_type_ids=False,
+                pad_to_max_length=True,
+                return_attention_mask=True,
+                return_tensors="pt",  # Return PyTorch tensors
             )
             out = bert_model(
-                input_ids=encoding['input_ids'],
-                attention_mask=encoding['attention_mask']
+                input_ids=encoding["input_ids"],
+                attention_mask=encoding["attention_mask"],
             )
             text = out["pooler_output"].squeeze()
-            #print(text.shape)
+            # print(text.shape)
 
         if "label" in self.samples_frame.columns:
             label = (
@@ -144,8 +144,14 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
 
 def collate(batch):
 
-    img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, label_tensor = None, None, None, None, None
-    
+    img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, label_tensor = (
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+
     # TODO Clean it up. Getting messy!
     if type(batch[0]["image"]) is tuple:
 

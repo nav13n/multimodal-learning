@@ -12,8 +12,11 @@ import pandas as pd
 import pandas_path
 from PIL import Image
 import torch
+import fasttext
 
 from torch.nn.utils.rnn import pad_sequence
+from torchvision.transforms import transforms
+from transformers import BertTokenizer
 
 
 class HatefulMemesDataset(torch.utils.data.Dataset):
@@ -25,12 +28,13 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
         self,
         data_path,
         img_dir,
-        image_transform,
-        text_transform,
+        text_embedding_model,
+        text_embedding_type="fasttext",
         balance=False,
         dev_limit=None,
         random_state=0,
     ):
+        assert text_embedding_type in ["fasttext", "bert"]
 
         self.samples_frame = pd.read_json(data_path, lines=True)
         self.dev_limit = dev_limit
@@ -50,15 +54,25 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
             lambda row: (Path(img_dir) / row.img), axis=1
         )
 
+        self.image_transform = transforms.Compose(
+            [
+                transforms.Resize(size=(224, 224)),
+                transforms.ToTensor(),
+            ]
+        )
+        self.text_embedding_type = text_embedding_type
+
+        if self.text_embedding_type == "fasttext":
+            self.text_transform = fasttext.load_model(text_embedding_model)
+        elif self.text_embedding_type == "bert":
+            self.text_transform = BertTokenizer.from_pretrained(text_embedding_model)
+
         # print(self.samples_frame.img)
         # # https://github.com/drivendataorg/pandas-path
         # if not self.samples_frame.img.path.exists().all():
         #     raise FileNotFoundError
         # if not self.samples_frame.img.path.is_file().all():
         #     raise TypeError
-
-        self.image_transform = image_transform
-        self.text_transform = text_transform
 
     def __len__(self):
         """This method is called when you do len(instance)
@@ -78,9 +92,7 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
         image = Image.open(self.samples_frame.loc[idx, "img"]).convert("RGB")
         image = self.image_transform(image)
 
-        text = torch.Tensor(
-            self.text_transform.get_sentence_vector(self.samples_frame.loc[idx, "text"])
-        ).squeeze()
+        text = self.transform_text(self.samples_frame.loc[idx, "text"])
 
         if "label" in self.samples_frame.columns:
             label = (
@@ -92,9 +104,25 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
 
         return sample
 
+    def transform_text(self, text_input):
+        if self.text_embedding_type == "fasttext":
+            return torch.Tensor(
+                self.text_transform.get_sentence_vector(text_input)
+            ).squeeze()
+        else:
+            tokenized_text = self.text_transform(
+                text_input,
+                return_tensors="pt",
+                return_attention_mask=False,
+                return_token_type=False,
+            )
+            return tokenized_text["input_ids"].squeeze()
+
 
 def collate(batch):
     img_tensor = pad_sequence([i["image"] for i in batch], batch_first=True)
+    for i in batch:
+        print(i["text"].shape)
     text_tensor = pad_sequence([i["text"] for i in batch], batch_first=True)
     label_tensor = torch.LongTensor([i["label"] for i in batch])
 
