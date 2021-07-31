@@ -97,7 +97,7 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
             )
             last_hidden_state, pooled_output = bert_model(
                 input_ids=encoding['input_ids'].squeeze(),
-                attention_mask=encoding['attention_mask'].sueeze()
+                attention_mask=encoding['attention_mask'].squeeze()
             )
             text[0] = pooled_output.squeeze()
             encoding = tokenizer.encode_plus(
@@ -111,7 +111,7 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
             )
             last_hidden_state, pooled_output = bert_model(
                 input_ids=encoding['input_ids'].squeeze(),
-                attention_mask=encoding['attention_mask'].sueeze()
+                attention_mask=encoding['attention_mask'].squeeze()
             )
             text[1] = pooled_output.squeeze()
         else:
@@ -125,10 +125,10 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
               return_tensors='pt',  # Return PyTorch tensors
             )
             last_hidden_state, pooled_output = bert_model(
-                input_ids=encoding['input_ids'].squeeze(),
-                attention_mask=encoding['attention_mask'].sueeze()
+                input_ids=encoding['input_ids'],
+                attention_mask=encoding['attention_mask']
             )
-            text = pooled_output.squeeze()
+            text = pooled_output
 
         if "label" in self.samples_frame.columns:
             label = (

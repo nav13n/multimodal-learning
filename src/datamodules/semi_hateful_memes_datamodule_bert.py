@@ -12,13 +12,8 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
-from transformers.modeling_bert import (
-    BertConfig,
-    BertEmbeddings,
-    BertForPreTraining,
-    BertPooler,
-    BertPredictionHeadTransform,
-    BertPreTrainingHeads,
+from transformers import (
+    BertModel,
     BertTokenizer
 )
 
@@ -81,9 +76,6 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             ]
         )
         PRE_TRAINED_MODEL_NAME='bert-base-cased'
-        self.bert_config = BertConfig.from_pretrained(self.config.bert_model_name)
-        bert_model = BertForPreTraining.from_pretrained(self.config.bert_model_name)
-        word_embedding = bert_model.bert.embeddings
         tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
         
         bert_model = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
