@@ -1,2 +1,1 @@
-from .fusion_model import LanguageAndVisionConcat
-from .semi_fusion_model import SemiLanguageAndVisionConcat
+from .fusion_model import LanguageAndVisionConcat, SemiLanguageAndVisionConcat

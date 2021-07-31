@@ -1,2 +1,1 @@
-from .modules import LanguageAndVisionConcat
-from .modules import SemiLanguageAndVisionConcat
+from .modules import LanguageAndVisionConcat, SemiLanguageAndVisionConcat
