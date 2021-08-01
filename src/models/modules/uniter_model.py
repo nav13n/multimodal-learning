@@ -46,26 +46,7 @@ class HatefulMemesUniterModule(LightningModule):
 
         self.save_hyperparameters()
 
-        if model_type == "concat":
-            self.model = ConcatModel(
-                embedding_dim,
-                backbone_output_dim,
-                language_feature_dim,
-                vision_feature_dim,
-                fusion_output_size,
-                dropout_p,
-                num_classes=num_classes,
-            )
-        else:
-            self.model = ConcatBert(
-                embedding_dim,
-                backbone_output_dim,
-                language_feature_dim,
-                vision_feature_dim,
-                fusion_output_size,
-                dropout_p,
-                num_classes=num_classes,
-            )
+        
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.train_accuracy = torchmetrics.Accuracy()
