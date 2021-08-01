@@ -80,17 +80,18 @@ class SemiHatefulMemesDataset(torch.utils.data.Dataset):
 
         image = Image.open(self.samples_frame.loc[idx, "img"]).convert("RGB")
         image = self.image_transform(image)
-        
+
         text = self.samples_frame.loc[idx, "text"]
         if self.text_transform is not None:
             text = self.text_transform(text)
-            
+
         if type(text) is tuple:
-            text = (torch.Tensor(self.text_encoder.get_sentence_vector(text[0])).squeeze(), \
-                torch.Tensor(self.text_encoder.get_sentence_vector(text[1])).squeeze())
+            text = (
+                torch.Tensor(self.text_encoder.get_sentence_vector(text[0])).squeeze(),
+                torch.Tensor(self.text_encoder.get_sentence_vector(text[1])).squeeze(),
+            )
         else:
             text = torch.Tensor(self.text_encoder.get_sentence_vector(text)).squeeze()
-
 
         if "label" in self.samples_frame.columns:
             label = (
@@ -105,8 +106,14 @@ class SemiHatefulMemesDataset(torch.utils.data.Dataset):
 
 def collate(batch):
 
-    img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, label_tensor = None, None, None, None, None
-    
+    img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, label_tensor = (
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+
     # TODO Clean it up. Getting messy!
     if type(batch[0]["image"]) is tuple:
 
