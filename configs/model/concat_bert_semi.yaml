@@ -1,9 +1,10 @@
 _target_: src.models.SemiLanguageAndVisionConcat
 
 embedding_dim: 768
-model_type: concat_bert
-language_feature_dim: 256
 backbone_output_dim: 1000
-vision_feature_dim: 256
-fusion_output_size: 256
-dropout_p: 0.1
+language_feature_dim: 128
+vision_feature_dim: 128
+fusion_output_size: 128
+model_type: concat_bert
+dropout_p: 0.25
+lr: 0.00001

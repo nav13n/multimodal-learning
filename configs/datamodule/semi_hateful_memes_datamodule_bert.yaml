@@ -1,6 +1,7 @@
 _target_: src.datamodules.SemiHatefulMemesDataModuleBERT
 
 data_dir: ${data_dir} # data_dir is specified in config.yaml
+text_embedding_type: bert
 batch_size: 64
 train_val_test_split: [800, 100, 100]
 num_workers: 0

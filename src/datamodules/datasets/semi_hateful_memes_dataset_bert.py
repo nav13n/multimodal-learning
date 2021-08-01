@@ -6,6 +6,7 @@ import tarfile
 import tempfile
 import warnings
 
+import fasttext
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -13,6 +14,9 @@ import pandas_path
 from PIL import Image
 import torch
 
+from ..fixmatch_transform import FixMatchImageTransform, FixMatchTextTransform
+from torchvision.transforms import transforms
+from transformers import BertModel, BertTokenizer
 from torch.nn.utils.rnn import pad_sequence
 
 
@@ -26,13 +30,14 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
         data,
         img_dir,
         idxs,
-        image_transform,
-        text_transform,
-        text_encoder,
+        text_embedding_model,
+        text_embedding_type="fasttext",
         balance=False,
         dev_limit=None,
         random_state=0,
+        labelled=True,
     ):
+        assert text_embedding_type in ["fasttext", "bert"]
 
         self.samples_frame = data.iloc[idxs]
         self.dev_limit = dev_limit
@@ -52,16 +57,37 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
             lambda row: (Path(img_dir) / row.img), axis=1
         )
 
+        if not labelled:
+            self.image_transform = FixMatchImageTransform(
+                transforms.Compose(
+                    [
+                        transforms.Resize(size=(224, 224)),
+                        transforms.ToTensor(),
+                    ]
+                )
+            )
+        else:
+            self.image_transform = transforms.Compose(
+                [
+                    transforms.Resize(size=(224, 224)),
+                    transforms.ToTensor(),
+                ]
+            )
+        self.text_embedding_type = text_embedding_type
+
+        if self.text_embedding_type == "fasttext":
+            self.text_transform = fasttext.load_model(text_embedding_model)
+        elif self.text_embedding_type == "bert":
+            self.text_transform = BertTokenizer.from_pretrained(text_embedding_model)
+
+        self.labelled = labelled
+
         # print(self.samples_frame.img)
         # # https://github.com/drivendataorg/pandas-path
         # if not self.samples_frame.img.path.exists().all():
         #     raise FileNotFoundError
         # if not self.samples_frame.img.path.is_file().all():
         #     raise TypeError
-
-        self.image_transform = image_transform
-        self.text_transform = text_transform
-        self.text_encoder = text_encoder
 
     def __len__(self):
         """This method is called when you do len(instance)
@@ -81,68 +107,7 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
         image = Image.open(self.samples_frame.loc[idx, "img"]).convert("RGB")
         image = self.image_transform(image)
 
-        text = self.samples_frame.loc[idx, "text"]
-        if self.text_transform is not None:
-            text = self.text_transform(text)
-        (tokenizer, bert_model) = self.text_encoder
-        if type(text) is tuple:
-            encoding = tokenizer.encode_plus(
-                text[0],
-                max_length=32,
-                add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
-                return_token_type_ids=False,
-                pad_to_max_length=True,
-                return_attention_mask=True,
-                return_tensors="pt",  # Return PyTorch tensors
-            )
-            out = bert_model(
-                input_ids=encoding["input_ids"],
-                attention_mask=encoding["attention_mask"],
-            )
-            temp = (
-                out[-1].squeeze()
-                if type(out) is tuple
-                else out["pooler_output"].squeeze()
-            )
-            encoding = tokenizer.encode_plus(
-                text[1],
-                max_length=32,
-                add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
-                return_token_type_ids=False,
-                pad_to_max_length=True,
-                return_attention_mask=True,
-                return_tensors="pt",  # Return PyTorch tensors
-            )
-            out = bert_model(
-                input_ids=encoding["input_ids"],
-                attention_mask=encoding["attention_mask"],
-            )
-            temp2 = (
-                out[-1].squeeze()
-                if type(out) is tuple
-                else out["pooler_output"].squeeze()
-            )
-            text = (temp, temp2)
-        else:
-            encoding = tokenizer.encode_plus(
-                text,
-                max_length=32,
-                add_special_tokens=True,  # Add '[CLS]' and '[SEP]'
-                return_token_type_ids=False,
-                pad_to_max_length=True,
-                return_attention_mask=True,
-                return_tensors="pt",  # Return PyTorch tensors
-            )
-            out = bert_model(
-                input_ids=encoding["input_ids"],
-                attention_mask=encoding["attention_mask"],
-            )
-            text = (
-                out[-1].squeeze()
-                if type(out) is tuple
-                else out["pooler_output"].squeeze()
-            )
-            # print(text.shape)
+        text = self.transform_text(self.samples_frame.loc[idx, "text"])
 
         if "label" in self.samples_frame.columns:
             label = (
@@ -153,6 +118,20 @@ class SemiHatefulMemesDatasetBERT(torch.utils.data.Dataset):
             sample = {"id": img_id, "image": image, "text": text}
 
         return sample
+
+    def transform_text(self, text_input):
+        if self.text_embedding_type == "fasttext":
+            return torch.Tensor(
+                self.text_transform.get_sentence_vector(text_input)
+            ).squeeze()
+        else:
+            tokenized_text = self.text_transform(
+                text_input,
+                return_tensors="pt",
+                return_attention_mask=False,
+                return_token_type_ids=False,
+            )
+            return tokenized_text["input_ids"].squeeze()
 
 
 def collate(batch):
@@ -170,8 +149,8 @@ def collate(batch):
 
         img_tensor_w = pad_sequence([i["image"][0] for i in batch], batch_first=True)
         img_tensor_s = pad_sequence([i["image"][1] for i in batch], batch_first=True)
-        text_tensor_w = pad_sequence([i["text"][0] for i in batch], batch_first=True)
-        text_tensor_s = pad_sequence([i["text"][1] for i in batch], batch_first=True)
+        text_tensor_w = pad_sequence([i["text"] for i in batch], batch_first=True)
+        text_tensor_s = pad_sequence([i["text"] for i in batch], batch_first=True)
 
         return img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s
 

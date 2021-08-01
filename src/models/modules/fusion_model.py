@@ -236,7 +236,7 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
         acc = self.train_accuracy(pred, label)
         auroc = self.train_auroc(pred, label)
 
-        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/auroc", auroc, on_step=False, on_epoch=True, prog_bar=True)
 
@@ -255,7 +255,7 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
         logits_s, pred_s = self.model(text_tensor_s, img_tensor_s)
         loss_s = (F.cross_entropy(logits_s, label_s, reduction="none") * mask).mean()
 
-        self.log("train/loss_s", loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("train/loss_s", loss, on_step=True, on_epoch=True, prog_bar=True)
 
         total_loss = loss + self.lambda_s * loss_s
 

@@ -14,8 +14,6 @@ import pandas as pd
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.datasets import MNIST
-from torchvision.transforms import transforms
-from transformers import BertModel, BertTokenizer
 
 
 class SemiHatefulMemesDataModuleBERT(LightningDataModule):
@@ -39,6 +37,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
     def __init__(
         self,
         data_dir: str = "data",
+        text_embedding_type: str = "fasttext",
         train_val_test_split: Tuple[int, int, int] = (800, 100, 100),  # TODO: Fix this
         batch_size: int = 64,
         num_workers: int = 0,
@@ -48,6 +47,8 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
         eval_step: int = 10,
     ):
         super().__init__()
+
+        assert text_embedding_type in ["fasttext", "bert"]
 
         self.data_dir = data_dir
 
@@ -64,22 +65,12 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
         self.expand_labels = expand_labels
         self.eval_step = eval_step
 
-        # TODO: Handle this
-        self.image_transforms = transforms.Compose(
-            [
-                transforms.Resize(size=(224, 224)),
-                transforms.ToTensor(),
-            ]
-        )
-        PRE_TRAINED_MODEL_NAME = "bert-base-uncased"
-        tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        self.text_embedding_type = text_embedding_type
 
-        bert_model = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
-
-        self.text_encoder = (tokenizer, bert_model)
-
-        # self.dims is returned when you call datamodule.size()
-        self.dims = (1, 224, 224)
+        if self.text_embedding_type == "fasttext":
+            self.text_embedding_model = f"{data_dir}/text_embedding.bin"
+        else:
+            self.text_embedding_model = "bert-base-uncased"
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
@@ -119,27 +110,26 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             data=self.train_samples,
             img_dir=self.img_dir,
             idxs=labeled_idxs,
-            image_transform=self.image_transforms,
-            text_transform=None,
-            text_encoder=self.text_encoder,
+            text_embedding_model=self.text_embedding_model,
+            text_embedding_type=self.text_embedding_type,
+            labelled=True,
         )
 
         self.data_train_unlabeled = SemiHatefulMemesDatasetBERT(
             data=self.train_samples,
             img_dir=self.img_dir,
             idxs=unlabeled_idxs,
-            image_transform=FixMatchImageTransform(self.image_transforms),
-            text_transform=FixMatchTextTransform(trfms=None),
-            text_encoder=self.text_encoder,
+            text_embedding_model=self.text_embedding_model,
+            text_embedding_type=self.text_embedding_type,
+            labelled=False,
         )
 
         self.data_val = SemiHatefulMemesDatasetBERT(
             data=self.val_samples,
             img_dir=self.img_dir,
             idxs=val_idxs,
-            image_transform=self.image_transforms,
-            text_transform=None,
-            text_encoder=self.text_encoder,
+            text_embedding_model=self.text_embedding_model,
+            text_embedding_type=self.text_embedding_type,
         )
         # TODO: Set test dataset
 
