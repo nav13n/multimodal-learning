@@ -18,17 +18,15 @@ Data can be downloaded from the below links
 
 Unzip and place it under `data/` directory.
 
-
-### Fasttext Embeddings 
-
 #### Fast Text Embeddings
 
-Fasttext model can be trained by running `scripts/train_fasttext.py`. If run successfully, you will find a 
-file called `text_embedding.bin` under `data/` directory.
+Fasttext model can be trained by running `scripts/train_fasttext.py`. If run successfully, you will find a file called `text_embedding.bin` under `data/` directory.
 
 `python train_fasttext.py --input data/hateful_memes/defaults/annotations/train.jsonl --output-dir data/`
 
-#### Precomputed 
+#### Precomputed Features for UNITER Model
+
+UNITER model uses precomputed region features for the hateful memes dataset extracted from a bottom up attention model trained on Visual Genome dataset. We have used [this](https://github.com/airsplay/py-bottom-up-attention) implementation of bottom up attention on top of Detectron2 to extract the region features. You can download the extracted region features for the model from [here](). 
 
 ### Training
 

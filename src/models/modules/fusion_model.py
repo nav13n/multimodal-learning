@@ -1,3 +1,5 @@
+from pandas.core.base import NoNewAttributesMixin
+from src.models.modules.uniter import model
 import torch
 import torchvision
 import torch.nn as nn
@@ -65,6 +67,26 @@ class ConcatModel(nn.Module):
 
         return logits, pred
 
+class UnimodalImage(nn.Module):
+    def __init__(
+        self,
+        backbone_output_dim,
+        vision_feature_dim,
+        dropout_p,
+        num_classes=2,
+    ):
+        super().__init__()
+
+        self.vision_module = VisionModule(backbone_output_dim, vision_feature_dim)
+        self.fc = nn.Linear(in_features=vision_feature_dim, out_features=num_classes)
+        self.dropout = nn.Dropout(dropout_p)
+
+    def forward(self, text, image):
+        image_features = self.vision_module(image)
+        logits = self.fc(image_features)
+        pred = F.softmax(logits)
+
+        return logits, pred
 
 class ConcatBert(nn.Module):
     def __init__(
@@ -105,6 +127,53 @@ class ConcatBert(nn.Module):
         return logits, pred
 
 
+
+class UnimodalFasttext(nn.Module):
+    def __init__(
+        self,
+        embedding_dim,
+        language_feature_dim,
+        dropout_p,
+        num_classes=2,
+    ):
+        super().__init__()
+
+        self.language_module = LanguageModule(embedding_dim, language_feature_dim)
+        self.fc = nn.Linear(in_features=language_feature_dim, out_features=num_classes)
+        self.dropout = nn.Dropout(dropout_p)
+
+    def forward(self, text, image):
+        text_features = self.language_module(text)
+        logits = self.fc(text_features)
+        pred = F.softmax(logits)
+
+        return logits, pred
+
+class UnimodalBert(nn.Module):
+    def __init__(
+        self,
+        embedding_dim,
+        language_feature_dim,
+        dropout_p,
+        num_classes=2,
+    ):
+        super().__init__()
+
+        self.bert = BertModel.from_pretrained(PRE_TRAINED_BERT)
+
+        self.language_module = LanguageModule(embedding_dim, language_feature_dim)
+        self.fc = nn.Linear(in_features=language_feature_dim, out_features=num_classes)
+        self.dropout = nn.Dropout(dropout_p)
+
+    def forward(self, text, image):
+        text_features = self.bert(text)
+        text_features = self.language_module(text_features.pooler_output)
+        text_features = text_features
+        logits = self.fc(text_features)
+        pred = F.softmax(logits)
+        return logits, pred
+
+
 class LanguageAndVisionConcat(LightningModule):
     def __init__(
         self,
@@ -124,6 +193,41 @@ class LanguageAndVisionConcat(LightningModule):
         assert model_type in ["concat", "concat_bert"]
 
         self.save_hyperparameters()
+
+        if model_type == 'unimodel_fasttext':
+           
+           self.model = UnimodalFasttext(
+                embedding_dim,
+                language_feature_dim,
+                dropout_p,
+                num_classes=num_classes,
+            )
+        
+        if model_type == 'unimodel_bert':
+           
+           self.model = UnimodalBert(
+                embedding_dim,
+                language_feature_dim,
+                dropout_p,
+                num_classes=num_classes,
+            )
+
+        if model_type == 'unimodel_bert':
+           
+           self.model = UnimodalBert(
+                embedding_dim,
+                language_feature_dim,
+                dropout_p,
+                num_classes=num_classes,
+            )
+        
+        if model_type == 'unimodel_image':
+           self.model = UnimodalImage(
+                backbone_output_dim,
+                vision_feature_dim,
+                dropout_p,
+                num_classes=num_classes,
+            )
 
         if model_type == "concat":
             self.model = ConcatModel(
