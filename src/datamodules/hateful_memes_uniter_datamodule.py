@@ -54,7 +54,7 @@ class HatefulMemesUniterDataModule(LightningDataModule):
         if self.text_embedding_type == "fasttext":
             self.text_embedding_model = f"{data_dir}/text_embedding.bin"
         else:
-            self.text_embedding_model = "bert-base-uncased"
+            self.text_embedding_model = "bert-base-cased"
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None

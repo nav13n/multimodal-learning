@@ -24,8 +24,9 @@ class HatefulMemesUniterModel(nn.Module):
     def forward(self, **kwargs):
         out = self.model(**kwargs)
         out = self.model.pooler(out)
-        out = self.linear(out)
-        return out
+        logits = self.linear(out)
+        preds = F.softmax(logits)
+        return logits, preds
 
 class HatefulMemesUniter(LightningModule):
     def __init__(
@@ -34,7 +35,7 @@ class HatefulMemesUniter(LightningModule):
         pretrained_model_config,
         num_classes=2,
         dropout=0.1,
-        lr=0.0003,
+        lr=0.00003,
         weight_decay=0.00005,
     ):
         super().__init__()
@@ -47,7 +48,7 @@ class HatefulMemesUniter(LightningModule):
                                                             state_dict=checkpoint,
                                                             img_dim=IMG_DIM,
                                                             img_label_dim=IMG_LABEL_DIM)
-        self.model = HatefulMemesUniterModel(uniter_model=base_model.uniter,
+        self.model = HatefulMemesUniterModel(model=base_model.uniter,
                                 hidden_size=base_model.uniter.config.hidden_size,
                                 n_classes=num_classes)       
 
@@ -63,11 +64,13 @@ class HatefulMemesUniter(LightningModule):
 
     def training_step(self, batch, batch_idx):
 
-        pred = self.model(img_feat=batch['img_feat'], img_pos_feat=batch['img_pos_feat'], input_ids=batch['input_ids'],
+        logits, pred = self.model(img_feat=batch['img_feat'], img_pos_feat=batch['img_pos_feat'], input_ids=batch['input_ids'],
                             position_ids=batch['position_ids'], attention_mask=batch['attn_mask'], gather_index=batch['gather_index'],
                             output_all_encoded_layers=False)
 
         label = batch['labels']
+
+
         loss = self.loss_fn(pred, label)
         acc = self.train_accuracy(pred, label)
         auroc = self.train_auroc(pred, label)
@@ -79,11 +82,12 @@ class HatefulMemesUniter(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        pred = self.model(img_feat=batch['img_feat'], img_pos_feat=batch['img_pos_feat'], input_ids=batch['input_ids'],
+        logits, pred = self.model(img_feat=batch['img_feat'], img_pos_feat=batch['img_pos_feat'], input_ids=batch['input_ids'],
                             position_ids=batch['position_ids'], attention_mask=batch['attn_mask'], gather_index=batch['gather_index'],
                             output_all_encoded_layers=False)
 
         label = batch['labels']
+      
         loss = self.loss_fn(pred, label)
         acc = self.val_accuracy(pred, label)
         auroc = self.val_auroc(pred, label)
