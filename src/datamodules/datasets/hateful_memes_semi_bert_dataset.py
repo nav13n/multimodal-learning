@@ -6,37 +6,40 @@ import tarfile
 import tempfile
 import warnings
 
+import fasttext
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pandas_path
 from PIL import Image
 import torch
-import fasttext
 
-from torch.nn.utils.rnn import pad_sequence
+from ..fixmatch_transform import FixMatchImageTransform, FixMatchTextTransform
 from torchvision.transforms import transforms
-from transformers import BertTokenizer
+from transformers import BertModel, BertTokenizer
+from torch.nn.utils.rnn import pad_sequence
 
 
-class HatefulMemesDataset(torch.utils.data.Dataset):
+class HatefulMemesSemiBERTDataset(torch.utils.data.Dataset):
     """Uses jsonl data to preprocess and serve
     dictionary of multimodal tensors for model input.
     """
 
     def __init__(
         self,
-        data_path,
+        data,
         img_dir,
+        idxs,
         text_embedding_model,
         text_embedding_type="fasttext",
         balance=False,
         num_labeled=None,
         random_state=0,
+        labelled=True,
     ):
         assert text_embedding_type in ["fasttext", "bert"]
 
-        self.samples_frame = pd.read_json(data_path, lines=True)
+        self.samples_frame = data.iloc[idxs]
         self.num_labeled = num_labeled
         if balance:
             neg = self.samples_frame[self.samples_frame.label.eq(0)]
@@ -54,18 +57,30 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
             lambda row: (Path(img_dir) / row.img), axis=1
         )
 
-        self.image_transform = transforms.Compose(
-            [
-                transforms.Resize(size=(224, 224)),
-                transforms.ToTensor(),
-            ]
-        )
+        if not labelled:
+            self.image_transform = FixMatchImageTransform(
+                transforms.Compose(
+                    [
+                        transforms.Resize(size=(224, 224)),
+                        transforms.ToTensor(),
+                    ]
+                )
+            )
+        else:
+            self.image_transform = transforms.Compose(
+                [
+                    transforms.Resize(size=(224, 224)),
+                    transforms.ToTensor(),
+                ]
+            )
         self.text_embedding_type = text_embedding_type
 
         if self.text_embedding_type == "fasttext":
             self.text_transform = fasttext.load_model(text_embedding_model)
         elif self.text_embedding_type == "bert":
             self.text_transform = BertTokenizer.from_pretrained(text_embedding_model)
+
+        self.labelled = labelled
 
         # print(self.samples_frame.img)
         # # https://github.com/drivendataorg/pandas-path
@@ -120,8 +135,29 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
 
 
 def collate(batch):
-    img_tensor = pad_sequence([i["image"] for i in batch], batch_first=True)
-    text_tensor = pad_sequence([i["text"] for i in batch], batch_first=True)
-    label_tensor = torch.LongTensor([i["label"] for i in batch])
 
-    return img_tensor, text_tensor, label_tensor
+    img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, label_tensor = (
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+
+    # TODO Clean it up. Getting messy!
+    if type(batch[0]["image"]) is tuple:
+
+        img_tensor_w = pad_sequence([i["image"][0] for i in batch], batch_first=True)
+        img_tensor_s = pad_sequence([i["image"][1] for i in batch], batch_first=True)
+        text_tensor_w = pad_sequence([i["text"] for i in batch], batch_first=True)
+        text_tensor_s = pad_sequence([i["text"] for i in batch], batch_first=True)
+
+        return img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s
+
+    else:
+
+        img_tensor_w = pad_sequence([i["image"] for i in batch], batch_first=True)
+        text_tensor_w = pad_sequence([i["text"] for i in batch], batch_first=True)
+        label_tensor = torch.LongTensor([i["label"] for i in batch])
+
+        return img_tensor_w, text_tensor_w, label_tensor

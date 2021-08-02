@@ -1,3 +1,4 @@
+from src.datamodules.datasets.hateful_memes_uniter_dataset import HatefulMemesUniterDataset
 from typing import Optional, Tuple
 
 from pytorch_lightning import LightningDataModule
@@ -6,7 +7,7 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
 
-class MNISTDataModule(LightningDataModule):
+class HatefulMemesUniterDataModule(LightningDataModule):
     """
     Example of LightningDataModule for MNIST dataset.
 
@@ -26,26 +27,36 @@ class MNISTDataModule(LightningDataModule):
 
     def __init__(
         self,
-        data_dir: str = "data/",
-        train_val_test_split: Tuple[int, int, int] = (55_000, 5_000, 10_000),
+        data_dir: str = "data",
+        text_embedding_type: str = "fasttext",
+        train_val_test_split: Tuple[int, int, int] = (800, 100, 100),  # TODO: Fix this
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
+        num_labeled: int = None
     ):
         super().__init__()
 
+        assert text_embedding_type in ["fasttext", "bert"]
+
         self.data_dir = data_dir
+
+        self.train_datapath = f"{data_dir}/hateful_memes/train.jsonl"
+        self.val_datapath = f"{data_dir}/hateful_memes/dev_seen.jsonl"
+        self.img_dir = f"{data_dir}/hateful_memes"
+
         self.train_val_test_split = train_val_test_split
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
+        self.num_labeled = num_labeled
 
-        self.transforms = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-        )
+        self.text_embedding_type = text_embedding_type
 
-        # self.dims is returned when you call datamodule.size()
-        self.dims = (1, 28, 28)
+        if self.text_embedding_type == "fasttext":
+            self.text_embedding_model = f"{data_dir}/text_embedding.bin"
+        else:
+            self.text_embedding_model = "bert-base-cased"
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
@@ -53,22 +64,29 @@ class MNISTDataModule(LightningDataModule):
 
     @property
     def num_classes(self) -> int:
-        return 10
+        return 2
 
     def prepare_data(self):
         """Download data if needed. This method is called only from a single GPU.
         Do not use it to assign state (self.x = y)."""
-        MNIST(self.data_dir, train=True, download=True)
-        MNIST(self.data_dir, train=False, download=True)
+        pass
+        # Download the data manually for now. No support for auto download yet
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: self.data_train, self.data_val, self.data_test."""
-        trainset = MNIST(self.data_dir, train=True, transform=self.transforms)
-        testset = MNIST(self.data_dir, train=False, transform=self.transforms)
-        dataset = ConcatDataset(datasets=[trainset, testset])
-        self.data_train, self.data_val, self.data_test = random_split(
-            dataset, self.train_val_test_split
+        self.data_train = HatefulMemesUniterDataset(
+            self.train_datapath,
+            self.img_dir,
+            self.text_embedding_model,
+            self.text_embedding_type,
         )
+        self.data_val = HatefulMemesUniterDataset(
+            self.val_datapath,
+            self.img_dir,
+            self.text_embedding_model,
+            self.text_embedding_type,
+        )
+        # TODO: Set test dataset
 
     def train_dataloader(self):
         return DataLoader(
@@ -76,6 +94,7 @@ class MNISTDataModule(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            collate_fn=self.data_train.get_collate_function(),
             shuffle=True,
         )
 
@@ -85,14 +104,16 @@ class MNISTDataModule(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            collate_fn=self.data_val.get_collate_function(),
             shuffle=False,
         )
 
     def test_dataloader(self):
-        return DataLoader(
-            dataset=self.data_test,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            pin_memory=self.pin_memory,
-            shuffle=False,
-        )
+        # return DataLoader(
+        #     dataset=self.data_test,
+        #     batch_size=self.batch_size,
+        #     num_workers=self.num_workers,
+        #     pin_memory=self.pin_memory,
+        #     shuffle=False,
+        # )
+        raise NotImplementedError()
