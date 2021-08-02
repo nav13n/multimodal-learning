@@ -1,5 +1,5 @@
-from src.datamodules.datasets.semi_hateful_memes_dataset_bert import (
-    SemiHatefulMemesDatasetBERT,
+from src.datamodules.datasets.hateful_memes_semi_bert_dataset import (
+    HatefulMemesSemiBERTDataset,
     collate,
 )
 from .fixmatch_transform import FixMatchImageTransform, FixMatchTextTransform
@@ -18,7 +18,7 @@ from torchvision.transforms import transforms
 from transformers import BertModel, BertTokenizer
 
 
-class SemiHatefulMemesDataModuleBERT(LightningDataModule):
+class HatefulMemesSemiBERTDataModule(LightningDataModule):
     """
     LightningDataModule for Hateful Memes dataset.
 
@@ -115,7 +115,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
         labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
         val_idxs = np.array(range(self.val_samples.label.shape[0]))
 
-        self.data_train_labeled = SemiHatefulMemesDatasetBERT(
+        self.data_train_labeled = HatefulMemesSemiBERTDataset(
             data=self.train_samples,
             img_dir=self.img_dir,
             idxs=labeled_idxs,
@@ -124,7 +124,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             text_encoder=self.text_encoder,
         )
 
-        self.data_train_unlabeled = SemiHatefulMemesDatasetBERT(
+        self.data_train_unlabeled = HatefulMemesSemiBERTDataset(
             data=self.train_samples,
             img_dir=self.img_dir,
             idxs=unlabeled_idxs,
@@ -133,7 +133,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             text_encoder=self.text_encoder,
         )
 
-        self.data_val = SemiHatefulMemesDatasetBERT(
+        self.data_val = HatefulMemesSemiBERTDataset(
             data=self.val_samples,
             img_dir=self.img_dir,
             idxs=val_idxs,

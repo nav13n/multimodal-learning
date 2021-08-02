@@ -1,4 +1,4 @@
-_target_: src.datamodules.SemiHatefulMemesDataModule
+_target_: src.datamodules.HatefulMemesSemiBERTDataModule
 
 data_dir: ${data_dir} # data_dir is specified in config.yaml
 batch_size: 64

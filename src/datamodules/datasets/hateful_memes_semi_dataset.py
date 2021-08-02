@@ -16,7 +16,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 
 
-class SemiHatefulMemesDataset(torch.utils.data.Dataset):
+class HatefulMemesSemiDataset(torch.utils.data.Dataset):
     """Uses jsonl data to preprocess and serve
     dictionary of multimodal tensors for model input.
     """

@@ -1,5 +1,5 @@
-from src.datamodules.datasets.semi_hateful_memes_dataset import (
-    SemiHatefulMemesDataset,
+from src.datamodules.datasets.hateful_memes_semi_dataset import (
+    HatefulMemesSemiDataset,
     collate,
 )
 from .fixmatch_transform import FixMatchImageTransform, FixMatchTextTransform
@@ -17,7 +17,7 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
 
-class SemiHatefulMemesDataModule(LightningDataModule):
+class HatefulMemesSemiDataModule(LightningDataModule):
     """
     LightningDataModule for Hateful Memes dataset.
 
@@ -109,7 +109,7 @@ class SemiHatefulMemesDataModule(LightningDataModule):
         labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
         val_idxs = np.array(range(self.val_samples.label.shape[0]))
 
-        self.data_train_labeled = SemiHatefulMemesDataset(
+        self.data_train_labeled = HatefulMemesSemiDataset(
             data=self.train_samples,
             img_dir=self.img_dir,
             idxs=labeled_idxs,
@@ -118,7 +118,7 @@ class SemiHatefulMemesDataModule(LightningDataModule):
             text_encoder=self.text_encoder,
         )
 
-        self.data_train_unlabeled = SemiHatefulMemesDataset(
+        self.data_train_unlabeled = HatefulMemesSemiDataset(
             data=self.train_samples,
             img_dir=self.img_dir,
             idxs=unlabeled_idxs,
@@ -127,7 +127,7 @@ class SemiHatefulMemesDataModule(LightningDataModule):
             text_encoder=self.text_encoder,
         )
 
-        self.data_val = SemiHatefulMemesDataset(
+        self.data_val = HatefulMemesSemiDataset(
             data=self.val_samples,
             img_dir=self.img_dir,
             idxs=val_idxs,
