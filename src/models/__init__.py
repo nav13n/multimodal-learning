@@ -1,1 +1,1 @@
-from .modules import LanguageAndVisionConcat, SemiLanguageAndVisionConcat
+from .modules import LanguageAndVisionConcat, SemiLanguageAndVisionConcat, HatefulMemesUniter

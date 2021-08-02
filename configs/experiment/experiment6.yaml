@@ -5,8 +5,8 @@
 
 defaults:
   - override /trainer: null # override trainer to null so it's not loaded from main config defaults...
-  - override /model: concat_bert
-  - override /datamodule: hateful_memes_bert_datamodule
+  - override /model: concat_fasttext
+  - override /datamodule: hateful_memes_datamodule
   - override /callbacks: null
   - override /logger: tensorboard
 

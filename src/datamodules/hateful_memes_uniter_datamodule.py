@@ -1,7 +1,5 @@
-from src.datamodules.datasets.hateful_memes_dataset import HatefulMemesDataset, collate
+from src.datamodules.datasets.hateful_memes_uniter_dataset import HatefulMemesUniterDataset
 from typing import Optional, Tuple
-
-import fasttext
 
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
@@ -9,7 +7,7 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
 
-class HatefulMemesDataModule(LightningDataModule):
+class HatefulMemesUniterDataModule(LightningDataModule):
     """
     Example of LightningDataModule for MNIST dataset.
 
@@ -51,14 +49,14 @@ class HatefulMemesDataModule(LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
-        self.num_labeled=num_labeled
+        self.num_labeled = num_labeled
 
         self.text_embedding_type = text_embedding_type
 
         if self.text_embedding_type == "fasttext":
             self.text_embedding_model = f"{data_dir}/text_embedding.bin"
         else:
-            self.text_embedding_model = "bert-base-uncased"
+            self.text_embedding_model = "bert-base-cased"
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
@@ -76,14 +74,13 @@ class HatefulMemesDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: self.data_train, self.data_val, self.data_test."""
-        self.data_train = HatefulMemesDataset(
+        self.data_train = HatefulMemesUniterDataset(
             self.train_datapath,
             self.img_dir,
             self.text_embedding_model,
             self.text_embedding_type,
-            num_labeled=self.num_labeled
         )
-        self.data_val = HatefulMemesDataset(
+        self.data_val = HatefulMemesUniterDataset(
             self.val_datapath,
             self.img_dir,
             self.text_embedding_model,
@@ -97,7 +94,7 @@ class HatefulMemesDataModule(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            collate_fn=collate,
+            collate_fn=self.data_train.get_collate_function(),
             shuffle=True,
         )
 
@@ -107,7 +104,7 @@ class HatefulMemesDataModule(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            collate_fn=collate,
+            collate_fn=self.data_val.get_collate_function(),
             shuffle=False,
         )
 

@@ -1,4 +1,5 @@
-from .datasets import HatefulMemesDataset, SemiHatefulMemesDataset
+from .datasets import HatefulMemesDataset, HatefulMemesSemiDataset, HatefulMemesSemiBERTDataset, HatefulMemesUniterDataset
 from .hateful_memes_datamodule import HatefulMemesDataModule
-from .semi_hateful_memes_datamodule import SemiHatefulMemesDataModule
-from .semi_hateful_memes_datamodule_bert import SemiHatefulMemesDataModuleBERT
+from .hateful_memes_semi_datamodule import HatefulMemesSemiDataModule 
+from .hateful_memes_semi_bert_datamodule import HatefulMemesSemiBERTDataModule
+from .hateful_memes_uniter_datamodule import HatefulMemesUniterDataModule

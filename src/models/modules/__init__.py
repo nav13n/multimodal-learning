@@ -1,1 +1,2 @@
 from .fusion_model import LanguageAndVisionConcat, SemiLanguageAndVisionConcat
+from .uniter_model import HatefulMemesUniter

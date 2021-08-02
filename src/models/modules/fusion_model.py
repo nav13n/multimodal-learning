@@ -24,7 +24,7 @@ class LanguageModule(nn.Module):
 class VisionModule(nn.Module):
     def __init__(self, backbone_output_dim, output_dim):
         super().__init__()
-        self.backbone = torchvision.models.resnet18(pretrained=True)
+        self.backbone = torchvision.models.resnet101(pretrained=True)
         self.fc = nn.Linear(backbone_output_dim, output_dim)
 
     def forward(self, image):

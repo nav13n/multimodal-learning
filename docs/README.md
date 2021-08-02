@@ -19,12 +19,16 @@ Data can be downloaded from the below links
 Unzip and place it under `data/` directory.
 
 
-### Embeddings
+### Fasttext Embeddings 
+
+#### Fast Text Embeddings
 
 Fasttext model can be trained by running `scripts/train_fasttext.py`. If run successfully, you will find a 
 file called `text_embedding.bin` under `data/` directory.
 
 `python train_fasttext.py --input data/hateful_memes/defaults/annotations/train.jsonl --output-dir data/`
+
+#### Precomputed 
 
 ### Training
 
