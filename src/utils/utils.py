@@ -2,6 +2,7 @@ import logging
 import os
 import warnings
 from typing import List, Sequence
+import numpy as np
 
 import pytorch_lightning as pl
 import rich.syntax
@@ -171,3 +172,4 @@ def finish(
             import wandb
 
             wandb.finish()
+
