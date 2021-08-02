@@ -35,6 +35,7 @@ class HatefulMemesDataModule(LightningDataModule):
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
+        num_labeled: int = None
     ):
         super().__init__()
 
@@ -50,6 +51,7 @@ class HatefulMemesDataModule(LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
+        self.num_labeled=num_labeled
 
         self.text_embedding_type = text_embedding_type
 
@@ -79,6 +81,7 @@ class HatefulMemesDataModule(LightningDataModule):
             self.img_dir,
             self.text_embedding_model,
             self.text_embedding_type,
+            num_labeled=self.num_labeled
         )
         self.data_val = HatefulMemesDataset(
             self.val_datapath,

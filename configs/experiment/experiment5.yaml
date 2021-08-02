@@ -5,8 +5,8 @@
 
 defaults:
   - override /trainer: null # override trainer to null so it's not loaded from main config defaults...
-  - override /model: concat_bert
-  - override /datamodule: hateful_memes_bert_datamodule
+  - override /model: concat_fasttext
+  - override /datamodule: hateful_memes_datamodule
   - override /callbacks: null
   - override /logger: tensorboard
 
@@ -24,6 +24,9 @@ trainer:
   gradient_clip_val: 0.5
   weights_summary: full
   # resume_from_checkpoint: ${work_dir}/last.ckpt
+
+datamodule:
+  num_labeled: 1000
 
 callbacks:
   model_checkpoint:

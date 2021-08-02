@@ -31,23 +31,23 @@ class HatefulMemesDataset(torch.utils.data.Dataset):
         text_embedding_model,
         text_embedding_type="fasttext",
         balance=False,
-        dev_limit=None,
+        num_labeled=None,
         random_state=0,
     ):
         assert text_embedding_type in ["fasttext", "bert"]
 
         self.samples_frame = pd.read_json(data_path, lines=True)
-        self.dev_limit = dev_limit
+        self.num_labeled = num_labeled
         if balance:
             neg = self.samples_frame[self.samples_frame.label.eq(0)]
             pos = self.samples_frame[self.samples_frame.label.eq(1)]
             self.samples_frame = pd.concat(
                 [neg.sample(pos.shape[0], random_state=random_state), pos]
             )
-        if self.dev_limit:
-            if self.samples_frame.shape[0] > self.dev_limit:
+        if self.num_labeled:
+            if self.samples_frame.shape[0] > int(self.num_labeled):
                 self.samples_frame = self.samples_frame.sample(
-                    dev_limit, random_state=random_state
+                    num_labeled, random_state=random_state
                 )
         self.samples_frame = self.samples_frame.reset_index(drop=True)
         self.samples_frame.img = self.samples_frame.apply(

@@ -33,6 +33,7 @@ class HatefulMemesUniterDataModule(LightningDataModule):
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
+        num_labeled: int = None
     ):
         super().__init__()
 
@@ -48,6 +49,7 @@ class HatefulMemesUniterDataModule(LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
+        self.num_labeled = num_labeled
 
         self.text_embedding_type = text_embedding_type
 
