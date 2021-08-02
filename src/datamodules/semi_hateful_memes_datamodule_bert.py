@@ -106,6 +106,10 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
         labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
         val_idxs = np.array(range(self.val_samples.label.shape[0]))
 
+        print(
+            f"labelled idx ******** {len(labeled_idxs)} | unlabeled_idxs: {len(unlabeled_idxs)}"
+        )
+
         self.data_train_labeled = SemiHatefulMemesDatasetBERT(
             data=self.train_samples,
             img_dir=self.img_dir,
@@ -142,6 +146,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             pin_memory=self.pin_memory,
             collate_fn=collate,
             shuffle=True,
+            drop_last=True,
         )
 
         train_unlabeled_dataloader = DataLoader(
@@ -151,6 +156,7 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             pin_memory=self.pin_memory,
             collate_fn=collate,
             shuffle=True,
+            drop_last=True,
         )
         return train_labeled_dataloader, train_unlabeled_dataloader
 
@@ -176,7 +182,6 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
 
     # TODO Clean it's config better
     def _x_u_split(self, labels):
-
         label_per_class = self.num_labeled // self.num_classes
         labels = np.array(labels)
         labeled_idx = []
@@ -188,7 +193,6 @@ class SemiHatefulMemesDataModuleBERT(LightningDataModule):
             labeled_idx.extend(idx)
         labeled_idx = np.array(labeled_idx)
         assert len(labeled_idx) == self.num_labeled
-
         if self.expand_labels or self.num_labeled < self.batch_size:
             num_expand_x = math.ceil(
                 self.batch_size * self.eval_step / self.num_labeled

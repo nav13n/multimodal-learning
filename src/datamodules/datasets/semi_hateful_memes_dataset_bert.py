@@ -151,13 +151,15 @@ def collate(batch):
         img_tensor_s = pad_sequence([i["image"][1] for i in batch], batch_first=True)
         text_tensor_w = pad_sequence([i["text"] for i in batch], batch_first=True)
         text_tensor_s = pad_sequence([i["text"] for i in batch], batch_first=True)
+        img_id = [i["id"] for i in batch]
 
-        return img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s
+        return img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, img_id
 
     else:
 
         img_tensor_w = pad_sequence([i["image"] for i in batch], batch_first=True)
         text_tensor_w = pad_sequence([i["text"] for i in batch], batch_first=True)
         label_tensor = torch.LongTensor([i["label"] for i in batch])
+        img_id = [i["id"] for i in batch]
 
-        return img_tensor_w, text_tensor_w, label_tensor
+        return img_tensor_w, text_tensor_w, label_tensor, img_id

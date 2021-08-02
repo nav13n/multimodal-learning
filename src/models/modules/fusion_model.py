@@ -2,6 +2,7 @@ import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_sequence
 
 import torchmetrics
 from pytorch_lightning import LightningModule
@@ -170,7 +171,7 @@ class LanguageAndVisionConcat(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        image, text, label = batch
+        image, text, label, lid = batch
         logits, pred = self.model(text, image)
 
         loss = self.loss_fn(pred, label)
@@ -226,15 +227,59 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
     def training_step(self, batch, batch_idx):
         labeled, unlabeled = batch
 
-        image, text, label = labeled
-        img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s = unlabeled
+        image, text, label, lid = labeled
+        img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, uid = unlabeled
 
-        # Actual Image Loss
-        logits, pred = self.model(text, image)
-        loss = F.cross_entropy(logits, label, reduction="mean")
+        batch_size = image.shape[0]
 
-        acc = self.train_accuracy(pred, label)
-        auroc = self.train_auroc(pred, label)
+        print(
+            f"image lab: {image.shape} | image weak: {img_tensor_w.shape} | image strong: {img_tensor_s.shape}"
+        )
+
+        # print(
+        #     f"text lab: {text.shape} | text weak: {text_tensor_w.shape} | text strong: {text_tensor_s.shape}"
+        # )
+
+        # stack all inputs together in a single batch
+        # this would help call model.forward() only once
+
+        img_inputs = torch.cat((image, img_tensor_w, img_tensor_s))
+
+        # text from labeled and unlabeled datasets can vary in length
+        # hence pad them
+
+        # output shape: (3, max_length, batch_size)
+        text_inputs = pad_sequence(
+            (
+                text.transpose(0, 1),
+                text_tensor_w.transpose(0, 1),
+                text_tensor_s.transpose(0, 1),
+            ),
+            batch_first=True,
+        )
+
+        # output shape: (3, batch_size, max_length)
+        text_inputs = text_inputs.transpose(1, 2)
+
+        # output shape: (3 * batch_size, max_length)
+        text_inputs = text_inputs.reshape(-1, text_inputs.shape[-1])
+
+        logits, pred = self.model(text_inputs, img_inputs)
+
+        logits_x = logits[:batch_size]
+        logits_w = logits[batch_size : 2 * batch_size]
+        logits_s = logits[2 * batch_size : 3 * batch_size]
+
+        del logits
+
+        pred_x = pred[:batch_size]
+        pred_w = pred[batch_size : 2 * batch_size]
+        pred_s = pred[2 * batch_size : 3 * batch_size]
+
+        loss = F.cross_entropy(logits_x, label, reduction="mean")
+
+        acc = self.train_accuracy(pred_x, label)
+        auroc = self.train_auroc(pred_x, label)
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
@@ -243,20 +288,21 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
         # TODO All three can be inferred at once with some tensor magic
 
         # Weak Aug Loss
-        logits_w, pred_w = self.model(text_tensor_w, img_tensor_w)
-
-        loss_w = self.loss_fn(pred, label)
+        # logits_w, pred_w = self.model(text_tensor_w, img_tensor_w)
 
         pseudo_label = torch.softmax(logits_w.detach() / self.T, dim=-1)
         max_probs, label_s = torch.max(pseudo_label, dim=-1)
         mask = max_probs.ge(self.threshold).float()
 
         # Strong Aug Loss
-        logits_s, pred_s = self.model(text_tensor_s, img_tensor_s)
+        # logits_s, pred_s = self.model(text_tensor_s, img_tensor_s)
         loss_s = (F.cross_entropy(logits_s, label_s, reduction="none") * mask).mean()
 
-        self.log("train/loss_s", loss, on_step=True, on_epoch=True, prog_bar=True)
-
+        self.log("train/loss_s", loss_s, on_step=True, on_epoch=True, prog_bar=True)
+        print(f"loss lab: {loss} | loss strong: {loss_s}")
         total_loss = loss + self.lambda_s * loss_s
+        self.log(
+            "train/total_loss", total_loss, on_step=True, on_epoch=True, prog_bar=True
+        )
 
         return total_loss
