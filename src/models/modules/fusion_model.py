@@ -171,7 +171,7 @@ class LanguageAndVisionConcat(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        image, text, label, lid = batch
+        image, text, label = batch
         logits, pred = self.model(text, image)
 
         loss = self.loss_fn(pred, label)
@@ -227,18 +227,10 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
     def training_step(self, batch, batch_idx):
         labeled, unlabeled = batch
 
-        image, text, label, lid = labeled
-        img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s, uid = unlabeled
+        image, text, label = labeled
+        img_tensor_w, img_tensor_s, text_tensor_w, text_tensor_s = unlabeled
 
         batch_size = image.shape[0]
-
-        print(
-            f"image lab: {image.shape} | image weak: {img_tensor_w.shape} | image strong: {img_tensor_s.shape}"
-        )
-
-        # print(
-        #     f"text lab: {text.shape} | text weak: {text_tensor_w.shape} | text strong: {text_tensor_s.shape}"
-        # )
 
         # stack all inputs together in a single batch
         # this would help call model.forward() only once
