@@ -6,3 +6,4 @@ batch_size: 64
 train_val_test_split: [800, 100, 100]
 num_workers: 0
 pin_memory: False
+

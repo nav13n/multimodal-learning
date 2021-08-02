@@ -1,242 +1,56 @@
-# import torch
-# import torchvision
-# import torch.nn as nn
-# import torch.nn.functional as F
-
-# import torchmetrics
-# from pytorch_lightning import LightningModule
-# from transformers import BertModel
-
-# from .uniter.model import UniterModel
-
-# class HatefulMemesUniterModel(nn.Module):
-
-#     def __init__(self,
-#                  model: UniterModel,
-#                  hidden_size: int,
-#                  n_classes: int):
-#         super().__init__()
-#         self.model = model
-#         self.n_classes = n_classes
-#         self.linear = nn.Linear(hidden_size, n_classes)
-
-#     def forward(self, **kwargs):
-#         out = self.model(**kwargs)
-#         out = self.model.pooler(out)
-#         out = self.linear(out)
-#         return out
-
-# class HatefulMemesUniter(LightningModule):
-#     def __init__(
-#         self,
-#         embedding_dim,
-#         backbone_output_dim,
-#         language_feature_dim,
-#         vision_feature_dim,
-#         fusion_output_size,
-#         dropout_p,
-#         model_type="concat",
-#         num_classes=2,
-#         lr=0.0003,
-#         weight_decay=0.00005,
-#     ):
-#         super().__init__()
-
-#         assert model_type in ["concat", "concat_bert"]
-
-#         self.save_hyperparameters()
-
-#         self.loss_fn = nn.CrossEntropyLoss()
-#         self.train_accuracy = torchmetrics.Accuracy()
-#         self.val_accuracy = torchmetrics.Accuracy()
-#         self.train_auroc = torchmetrics.AUROC(2)
-#         self.val_auroc = torchmetrics.AUROC(2)
-
-#     def forward(self, text, image, label=None):
-#         return self.model(text, image, label)
-
-#     def training_step(self, batch, batch_idx):
-
-#         image, text, label = batch
-#         logits, pred = self.model(text, image)
-
-#         loss = self.loss_fn(pred, label)
-#         acc = self.train_accuracy(pred, label)
-#         auroc = self.train_auroc(pred, label)
-
-#         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-#         self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
-#         self.log("train/auroc", auroc, on_step=False, on_epoch=True, prog_bar=True)
-
-#         return loss
-
-#     def validation_step(self, batch, batch_idx):
-#         image, text, label = batch
-#         logits, pred = self.model(text, image)
-
-#         loss = self.loss_fn(pred, label)
-#         acc = self.val_accuracy(pred, label)
-#         auroc = self.val_auroc(pred, label)
-
-#         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-#         self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
-#         self.log("val/auroc", auroc, on_step=False, on_epoch=True, prog_bar=True)
-#         return loss
-
-#     def configure_optimizers(self):
-#         return torch.optim.Adam(
-#             params=self.parameters(),
-#             lr=self.hparams.lr,
-#             weight_decay=self.hparams.weight_decay,
-#         )
-
-
 import torch
-import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
-
 import torchmetrics
 from pytorch_lightning import LightningModule
-from transformers import BertModel
 
+from .uniter.model import UniterModel
+from .uniter.pretrain import UniterForPretraining
 
-PRE_TRAINED_BERT = "bert-base-uncased"
+IMG_DIM = 2048
+IMG_LABEL_DIM = 1601
 
+class HatefulMemesUniterModel(nn.Module):
 
-class LanguageModule(nn.Module):
-    def __init__(self, embedding_dim, output_dim):
+    def __init__(self,
+                 model: UniterModel,
+                 hidden_size: int,
+                 n_classes: int):
         super().__init__()
-        self.fc = nn.Linear(embedding_dim, output_dim)
+        self.model = model
+        self.n_classes = n_classes
+        self.linear = nn.Linear(hidden_size, n_classes)
 
-    def forward(self, text):
-        return F.relu(self.fc(text))
-
-
-class VisionModule(nn.Module):
-    def __init__(self, backbone_output_dim, output_dim):
-        super().__init__()
-        self.backbone = torchvision.models.resnet18(pretrained=True)
-        self.fc = nn.Linear(backbone_output_dim, output_dim)
-
-    def forward(self, image):
-        return F.relu(self.fc(self.backbone(image)))
-
-
-class ConcatModel(nn.Module):
-    def __init__(
-        self,
-        embedding_dim,
-        backbone_output_dim,
-        language_feature_dim,
-        vision_feature_dim,
-        fusion_output_size,
-        dropout_p,
-        num_classes=2,
-    ):
-        super().__init__()
-
-        self.language_module = LanguageModule(embedding_dim, language_feature_dim)
-        self.vision_module = VisionModule(backbone_output_dim, vision_feature_dim)
-
-        self.fusion = nn.Linear(
-            in_features=(language_feature_dim + vision_feature_dim),
-            out_features=fusion_output_size,
-        )
-        self.fc = nn.Linear(in_features=fusion_output_size, out_features=num_classes)
-        self.dropout = nn.Dropout(dropout_p)
-
-    def forward(self, text, image):
-        text_features = self.language_module(text)
-        image_features = self.vision_module(image)
-
-        combined = torch.cat([text_features, image_features], dim=1)
-        fused = self.dropout(torch.nn.functional.relu(self.fusion(combined)))
-        logits = self.fc(fused)
-        pred = F.softmax(logits)
-
-        return logits, pred
-
-
-class ConcatBert(nn.Module):
-    def __init__(
-        self,
-        embedding_dim,
-        backbone_output_dim,
-        language_feature_dim,
-        vision_feature_dim,
-        fusion_output_size,
-        dropout_p,
-        num_classes=2,
-    ):
-        super().__init__()
-
-        self.bert = BertModel.from_pretrained(PRE_TRAINED_BERT)
-
-        self.language_module = LanguageModule(embedding_dim, language_feature_dim)
-        self.vision_module = VisionModule(backbone_output_dim, vision_feature_dim)
-
-        self.fusion = nn.Linear(
-            in_features=(language_feature_dim + vision_feature_dim),
-            out_features=fusion_output_size,
-        )
-        self.fc = nn.Linear(in_features=fusion_output_size, out_features=num_classes)
-        self.dropout = nn.Dropout(dropout_p)
-
-    def forward(self, text, image):
-        text_features = self.bert(text)
-        text_features = self.language_module(text_features.pooler_output)
-        text_features = text_features
-        image_features = self.vision_module(image)
-
-        combined = torch.cat([text_features, image_features], dim=1)
-        fused = F.relu(self.fusion(combined))
-        logits = self.fc(fused)
-        pred = F.softmax(logits)
-
-        return logits, pred
-
+    def forward(self, **kwargs):
+        out = self.model(**kwargs)
+        out = self.model.pooler(out)
+        out = self.linear(out)
+        return out
 
 class HatefulMemesUniter(LightningModule):
     def __init__(
         self,
-        embedding_dim,
-        backbone_output_dim,
-        language_feature_dim,
-        vision_feature_dim,
-        fusion_output_size,
-        dropout_p,
-        model_type="concat",
+        pretrained_model_file,
+        pretrained_model_config,
         num_classes=2,
+        dropout=0.1,
         lr=0.0003,
         weight_decay=0.00005,
     ):
         super().__init__()
 
-        assert model_type in ["concat", "concat_bert"]
-
         self.save_hyperparameters()
 
-        if model_type == "concat":
-            self.model = ConcatModel(
-                embedding_dim,
-                backbone_output_dim,
-                language_feature_dim,
-                vision_feature_dim,
-                fusion_output_size,
-                dropout_p,
-                num_classes=num_classes,
-            )
-        else:
-            self.model = ConcatBert(
-                embedding_dim,
-                backbone_output_dim,
-                language_feature_dim,
-                vision_feature_dim,
-                fusion_output_size,
-                dropout_p,
-                num_classes=num_classes,
-            )
+        # Initialise HatefulMemes Uniter Model
+        checkpoint = torch.load(pretrained_model_file)
+        base_model = UniterForPretraining.from_pretrained(pretrained_model_config,
+                                                            state_dict=checkpoint,
+                                                            img_dim=IMG_DIM,
+                                                            img_label_dim=IMG_LABEL_DIM)
+        self.model = HatefulMemesUniterModel(uniter_model=base_model.uniter,
+                                hidden_size=base_model.uniter.config.hidden_size,
+                                n_classes=num_classes)       
+
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.train_accuracy = torchmetrics.Accuracy()
@@ -244,14 +58,16 @@ class HatefulMemesUniter(LightningModule):
         self.train_auroc = torchmetrics.AUROC(2)
         self.val_auroc = torchmetrics.AUROC(2)
 
-    def forward(self, text, image, label=None):
-        return self.model(text, image, label)
+    def forward(self, **kwargs):
+        return self.model(**kwargs)
 
     def training_step(self, batch, batch_idx):
 
-        image, text, label = batch
-        logits, pred = self.model(text, image)
+        pred = self.model(img_feat=batch['img_feat'], img_pos_feat=batch['img_pos_feat'], input_ids=batch['input_ids'],
+                            position_ids=batch['position_ids'], attention_mask=batch['attn_mask'], gather_index=batch['gather_index'],
+                            output_all_encoded_layers=False)
 
+        label = batch['labels']
         loss = self.loss_fn(pred, label)
         acc = self.train_accuracy(pred, label)
         auroc = self.train_auroc(pred, label)
@@ -263,9 +79,11 @@ class HatefulMemesUniter(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        image, text, label = batch
-        logits, pred = self.model(text, image)
+        pred = self.model(img_feat=batch['img_feat'], img_pos_feat=batch['img_pos_feat'], input_ids=batch['input_ids'],
+                            position_ids=batch['position_ids'], attention_mask=batch['attn_mask'], gather_index=batch['gather_index'],
+                            output_all_encoded_layers=False)
 
+        label = batch['labels']
         loss = self.loss_fn(pred, label)
         acc = self.val_accuracy(pred, label)
         auroc = self.val_auroc(pred, label)
@@ -281,5 +99,4 @@ class HatefulMemesUniter(LightningModule):
             lr=self.hparams.lr,
             weight_decay=self.hparams.weight_decay,
         )
-
 

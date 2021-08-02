@@ -1,6 +1,7 @@
 pandas
 numpy
 matplotlib
+opencv-python
 
 # --------- pytorch --------- #
 # torch>=1.8.1

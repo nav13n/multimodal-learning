@@ -119,7 +119,7 @@ class HatefulMemesUniterDataset(torch.utils.data.Dataset):
 
     def get_collate_function(self):
 
-        def collate(items):
+        def collate_fn(items):
             
             img_ids = [i['img_id'] for i in items]
             texts = [i['text'] for i in items]
@@ -150,9 +150,9 @@ class HatefulMemesUniterDataset(torch.utils.data.Dataset):
             position_ids = torch.arange(0, input_ids.shape[1], device=input_ids.device).unsqueeze(0).repeat(input_ids.shape[0], 1)
 
             # Attention mask
-            text_mask = texts['attention_mask']
+            text_mask = tokenized_texts['attention_mask']
             img_len = [i.size(0) for i in img_features]
-            attn_mask = pad_sequence([torch.ones(text_len[i]+img_len[i]) for i in len(text_len)], batch_first=True, padding_value=0)
+            attn_mask = pad_sequence([torch.ones(text_len[i]+img_len[i]) for i,_ in enumerate(text_len)], batch_first=True, padding_value=0)
 
             # Gather index
             batch_size, out_size = attn_mask.shape
@@ -171,7 +171,7 @@ class HatefulMemesUniterDataset(torch.utils.data.Dataset):
                         'ids' : img_ids
             }
             return batch 
-        return collate
+        return collate_fn
 
 def get_gather_index(txt_lens, num_bbs, batch_size, max_len, out_size):
     assert len(txt_lens) == len(num_bbs) == batch_size

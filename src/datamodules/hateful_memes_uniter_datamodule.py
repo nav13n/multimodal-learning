@@ -1,4 +1,4 @@
-from src.datamodules.datasets.hateful_memes_uniter_dataset import HatefulMemesUniterDataset, collate
+from src.datamodules.datasets.hateful_memes_uniter_dataset import HatefulMemesUniterDataset
 from typing import Optional, Tuple
 
 from pytorch_lightning import LightningDataModule
