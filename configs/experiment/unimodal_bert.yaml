@@ -20,7 +20,7 @@ trainer:
   _target_: pytorch_lightning.Trainer
   gpus: 1
   min_epochs: 1
-  max_epochs: 10
+  max_epochs: 20
   gradient_clip_val: 0.5
   weights_summary: full
   # resume_from_checkpoint: ${work_dir}/last.ckpt
@@ -40,5 +40,5 @@ callbacks:
   early_stopping:
     _target_: pytorch_lightning.callbacks.EarlyStopping
     monitor: "val/acc"
-    patience: 10
+    patience: 5
     mode: "max"
