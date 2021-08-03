@@ -18,9 +18,10 @@ class LanguageModule(nn.Module):
     def __init__(self, embedding_dim, output_dim):
         super().__init__()
         self.fc = nn.Linear(embedding_dim, output_dim)
+        self.dropout = nn.Dropout(0.1)
 
     def forward(self, text):
-        return F.relu(self.fc(text))
+        return self.dropout(F.relu(self.fc(text)))
 
 
 class VisionModule(nn.Module):
@@ -28,9 +29,10 @@ class VisionModule(nn.Module):
         super().__init__()
         self.backbone = torchvision.models.resnet101(pretrained=True)
         self.fc = nn.Linear(backbone_output_dim, output_dim)
+        self.dropout = nn.Dropout(0.1)
 
     def forward(self, image):
-        return F.relu(self.fc(self.backbone(image)))
+        return self.dropout(F.relu(self.fc(self.backbone(image))))
 
 
 class ConcatModel(nn.Module):
@@ -54,7 +56,7 @@ class ConcatModel(nn.Module):
             out_features=fusion_output_size,
         )
         self.fc = nn.Linear(in_features=fusion_output_size, out_features=num_classes)
-        self.dropout = nn.Dropout(dropout_p)
+        self.dropout1 = nn.Dropout(dropout_p)
 
     def forward(self, text, image):
         text_features = self.language_module(text)
@@ -66,6 +68,7 @@ class ConcatModel(nn.Module):
         pred = F.softmax(logits)
 
         return logits, pred
+
 
 class UnimodalImage(nn.Module):
     def __init__(
@@ -87,6 +90,7 @@ class UnimodalImage(nn.Module):
         pred = F.softmax(logits)
 
         return logits, pred
+
 
 class ConcatBert(nn.Module):
     def __init__(
@@ -120,12 +124,11 @@ class ConcatBert(nn.Module):
         image_features = self.vision_module(image)
 
         combined = torch.cat([text_features, image_features], dim=1)
-        fused = F.relu(self.fusion(combined))
+        fused = self.dropout(F.relu(self.fusion(combined)))
         logits = self.fc(fused)
         pred = F.softmax(logits)
 
         return logits, pred
-
 
 
 class UnimodalFasttext(nn.Module):
@@ -148,6 +151,7 @@ class UnimodalFasttext(nn.Module):
         pred = F.softmax(logits)
 
         return logits, pred
+
 
 class UnimodalBert(nn.Module):
     def __init__(
@@ -194,35 +198,35 @@ class LanguageAndVisionConcat(LightningModule):
 
         self.save_hyperparameters()
 
-        if model_type == 'unimodel_fasttext':
-           
-           self.model = UnimodalFasttext(
-                embedding_dim,
-                language_feature_dim,
-                dropout_p,
-                num_classes=num_classes,
-            )
-        
-        if model_type == 'unimodel_bert':
-           
-           self.model = UnimodalBert(
+        if model_type == "unimodel_fasttext":
+
+            self.model = UnimodalFasttext(
                 embedding_dim,
                 language_feature_dim,
                 dropout_p,
                 num_classes=num_classes,
             )
 
-        if model_type == 'unimodel_bert':
-           
-           self.model = UnimodalBert(
+        if model_type == "unimodel_bert":
+
+            self.model = UnimodalBert(
                 embedding_dim,
                 language_feature_dim,
                 dropout_p,
                 num_classes=num_classes,
             )
-        
-        if model_type == 'unimodel_image':
-           self.model = UnimodalImage(
+
+        if model_type == "unimodel_bert":
+
+            self.model = UnimodalBert(
+                embedding_dim,
+                language_feature_dim,
+                dropout_p,
+                num_classes=num_classes,
+            )
+
+        if model_type == "unimodel_image":
+            self.model = UnimodalImage(
                 backbone_output_dim,
                 vision_feature_dim,
                 dropout_p,
@@ -343,9 +347,6 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
 
         # text from labeled and unlabeled datasets can vary in length
         # hence pad them
-        print(text.shape)
-        print(text_tensor_w.shape)
-        print(text_tensor_s.shape)
         # output shape: (3, max_length, batch_size)
         text_inputs = pad_sequence(
             (
