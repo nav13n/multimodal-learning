@@ -142,7 +142,7 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
             pin_memory=self.pin_memory,
             collate_fn=collate,
             shuffle=True,
-            drop_last=True
+            drop_last=True,
         )
 
         train_unlabeled_dataloader = DataLoader(
@@ -185,10 +185,10 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
         unlabeled_idx = np.array(range(len(labels)))
         for i in range(self.num_classes):
             idx = np.where(labels == i)[0]
-            idx = np.random.choice(idx, label_per_class, False)
+            idx = np.random.choice(idx, min(label_per_class, idx.shape[0]), False)
             labeled_idx.extend(idx)
         labeled_idx = np.array(labeled_idx)
-        assert len(labeled_idx) == self.num_labeled
+        # assert len(labeled_idx) == self.num_labeled
         if self.expand_labels or self.num_labeled < self.batch_size:
             num_expand_x = math.ceil(
                 self.batch_size * self.eval_step / self.num_labeled
