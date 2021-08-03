@@ -5,8 +5,8 @@
 
 defaults:
   - override /trainer: null # override trainer to null so it's not loaded from main config defaults...
-  - override /model: concat_fasttext
-  - override /datamodule: hateful_memes_semi_datamodule
+  - override /model: semi_concat_bert
+  - override /datamodule: hateful_memes_semi_bert_datamodule
   - override /callbacks: null
   - override /logger: tensorboard
 
@@ -14,7 +14,7 @@ defaults:
 # instead we define all modules and their paths directly in this config,
 # so everything is stored in one place
 
-seed: 12345
+seed: 7866
 
 trainer:
   _target_: pytorch_lightning.Trainer

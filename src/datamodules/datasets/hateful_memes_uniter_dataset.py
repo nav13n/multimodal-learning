@@ -54,12 +54,6 @@ class HatefulMemesUniterDataset(torch.utils.data.Dataset):
             lambda row: (Path(img_dir) / row.img), axis=1
         )
 
-        self.image_transform = transforms.Compose(
-            [
-                transforms.Resize(size=(224, 224)),
-                transforms.ToTensor(),
-            ]
-        )
         self.text_embedding_type = text_embedding_type
 
         self.text_transform = BertTokenizer.from_pretrained(text_embedding_model)

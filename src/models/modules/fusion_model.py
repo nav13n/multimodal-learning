@@ -343,7 +343,9 @@ class SemiLanguageAndVisionConcat(LanguageAndVisionConcat):
 
         # text from labeled and unlabeled datasets can vary in length
         # hence pad them
-
+        print(text.shape)
+        print(text_tensor_w.shape)
+        print(text_tensor_s.shape)
         # output shape: (3, max_length, batch_size)
         text_inputs = pad_sequence(
             (
