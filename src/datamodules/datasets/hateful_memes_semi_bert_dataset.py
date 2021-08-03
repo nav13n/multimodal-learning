@@ -62,16 +62,13 @@ class HatefulMemesSemiBERTDataset(torch.utils.data.Dataset):
                 transforms.Compose(
                     [
                         transforms.Resize(size=(224, 224)),
-                        transforms.ToTensor(),
                     ]
-                )
+                ),
+                transforms.Compose([transforms.ToTensor()]),
             )
         else:
             self.image_transform = transforms.Compose(
-                [
-                    transforms.Resize(size=(224, 224)),
-                    transforms.ToTensor(),
-                ]
+                [transforms.Resize(size=(224, 224)), transforms.ToTensor()]
             )
         self.text_embedding_type = text_embedding_type
 
