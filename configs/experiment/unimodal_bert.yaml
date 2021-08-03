@@ -5,8 +5,8 @@
 
 defaults:
   - override /trainer: null # override trainer to null so it's not loaded from main config defaults...
-  - override /model: semi_concat_bert
-  - override /datamodule: hateful_memes_semi_bert_datamodule
+  - override /model: concat_bert
+  - override /datamodule: hateful_memes_bert_datamodule
   - override /callbacks: null
   - override /logger: tensorboard
 
@@ -14,7 +14,7 @@ defaults:
 # instead we define all modules and their paths directly in this config,
 # so everything is stored in one place
 
-seed: 7866
+seed: 12345
 
 trainer:
   _target_: pytorch_lightning.Trainer
@@ -25,8 +25,8 @@ trainer:
   weights_summary: full
   # resume_from_checkpoint: ${work_dir}/last.ckpt
 
-datamodule:
-  num_labeled: 3000
+modal:
+  model_type: unimodal_bert
 
 callbacks:
   model_checkpoint:

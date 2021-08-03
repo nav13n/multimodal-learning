@@ -14,6 +14,7 @@ class FixMatchImageTransform(object):
     def __init__(self, pre_trfms, post_trfms):
         self.weak = transforms.Compose(
             [
+                transforms.Resize(size=(300, 300)),
                 transforms.RandomHorizontalFlip(),
                 # transforms.RandomCrop(
                 #     size=32, padding=int(32 * 0.125), padding_mode="reflect"
@@ -22,6 +23,7 @@ class FixMatchImageTransform(object):
         )
         self.strong = transforms.Compose(
             [
+                transforms.Resize(size=(300, 300)),
                 transforms.RandomHorizontalFlip(),
                 # transforms.RandomCrop(
                 #     size=32, padding=int(32 * 0.125), padding_mode="reflect"
