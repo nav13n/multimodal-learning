@@ -23,6 +23,7 @@ from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2.modeling.postprocessing import detector_postprocess
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers, FastRCNNOutputs
+from detectron2.utils.visualizer import _create_text_labels_attr, _create_text_labels
 
 
 D2_ROOT = os.path.dirname(os.path.dirname(detectron2.__file__)) # Root of detectron2
@@ -72,6 +73,22 @@ def fast_rcnn_inference_single_image(
     result.pred_classes = max_classes[keep]
     
     return result, keep
+
+def get_vg_classes():
+    # Load VG Classes
+    data_path = 'demo/data/genome/1600-400-20'
+
+    vg_classes = []
+    with open(os.path.join(data_path, 'objects_vocab.txt')) as f:
+        for object in f.readlines():
+            vg_classes.append(object.split(',')[0].lower().strip())
+            
+    vg_attrs = []
+    with open(os.path.join(data_path, 'attributes_vocab.txt')) as f:
+        for object in f.readlines():
+            vg_attrs.append(object.split(',')[0].lower().strip())
+
+    return vg_classes, vg_attrs
 
 def doit(detector, raw_images):
     with torch.no_grad():
@@ -142,6 +159,11 @@ def doit(detector, raw_images):
         
         return raw_instances_list, roi_features_list
 
+def get_labels(classes, class_names):
+    if classes is not None and class_names is not None and len(class_names) > 1:
+        labels = [class_names[i] for i in classes]
+        return labels
+
 def dump_features(output_path, detector, pathXid):
     img_paths, img_ids = zip(*pathXid)
     imgs = [cv2.imread(img_path) for img_path in img_paths]
@@ -152,23 +174,41 @@ def dump_features(output_path, detector, pathXid):
         features = features.to('cpu')
 
         num_objects = len(instances)
-
+        vg_classes, _ = get_vg_classes()
         item = {
             "img_id": img_id,
             "img_h": img.shape[0],
             "img_w": img.shape[1],
-            "objects_id": base64.b64encode(instances.pred_classes.numpy()).decode(),  # int64
-            "objects_conf": base64.b64encode(instances.scores.numpy()).decode(),  # float32
-            "attrs_id": base64.b64encode(np.zeros(num_objects, np.int64)).decode(),  # int64
-            "attrs_conf": base64.b64encode(np.zeros(num_objects, np.float32)).decode(),  # float32
+            "objects_id": instances.pred_classes.numpy().tolist(),  # int64
+            "objects_conf": instances.scores.numpy().tolist(),  # float32
             "num_boxes": num_objects,
+            "objects": get_labels(instances.pred_classes, vg_classes),
             "boxes": base64.b64encode(instances.pred_boxes.tensor.numpy()).decode(),  # float32
             "features": base64.b64encode(features.numpy()).decode()  # float32
         }
-
+  
         with open(os.path.join(output_path, img_id + '.json'), 'w') as jsonfile:
             json.dump(item, jsonfile)
-    
+
+def _create_text_labels(classes, scores, class_names):
+    """
+    Args:
+        classes (list[int] or None):
+        scores (list[float] or None):
+        class_names (list[str] or None):
+
+    Returns:
+        list[str] or None
+    """
+    labels = None
+    if classes is not None and class_names is not None and len(class_names) > 1:
+        labels = [class_names[i] for i in classes]
+    if scores is not None:
+        if labels is None:
+            labels = ["{:.0f}%".format(s * 100) for s in scores]
+        else:
+            labels = ["{} {:.0f}%".format(l, s * 100) for l, s in zip(labels, scores)]
+    return labels
 
 FIELDNAMES = ["img_id", "img_h", "img_w", "objects_id", "objects_conf",
               "attrs_id", "attrs_conf", "num_boxes", "boxes", "features"]

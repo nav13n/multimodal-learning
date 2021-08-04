@@ -105,7 +105,7 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
         # Split the train data into into labeled and unlabeled indexes
         labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
         val_idxs = np.array(range(self.val_samples.label.shape[0]))
-
+        np.random.shuffle(val_idxs)
         self.data_train_labeled = HatefulMemesSemiBERTDataset(
             data=self.train_samples,
             img_dir=self.img_dir,
@@ -185,10 +185,10 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
         unlabeled_idx = np.array(range(len(labels)))
         for i in range(self.num_classes):
             idx = np.where(labels == i)[0]
-            idx = np.random.choice(idx, label_per_class, False)
+            idx = np.random.choice(idx, min(label_per_class, idx.shape[0]), False)
             labeled_idx.extend(idx)
         labeled_idx = np.array(labeled_idx)
-        assert len(labeled_idx) == self.num_labeled
+        # assert len(labeled_idx) == self.num_labeled
         if self.expand_labels or self.num_labeled < self.batch_size:
             num_expand_x = math.ceil(
                 self.batch_size * self.eval_step / self.num_labeled

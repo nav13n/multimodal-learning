@@ -108,7 +108,7 @@ class HatefulMemesSemiDataModule(LightningDataModule):
         # Split the train data into into labeled and unlabeled indexes
         labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
         val_idxs = np.array(range(self.val_samples.label.shape[0]))
-
+        np.random.shuffle(val_idxs)
         self.data_train_labeled = HatefulMemesSemiDataset(
             data=self.train_samples,
             img_dir=self.img_dir,
