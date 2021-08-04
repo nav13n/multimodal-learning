@@ -21,7 +21,7 @@ $pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cu
 $rm -r apex
 ```
 Note: Apex installation expects cuda 10.2 to be innstalled on the system. You can verify your cuda version with 
-`nvcc --version`
+`nvcc --version` post installation.
 
 6) Clone the repo
 `git clone https://github.com/nav13n/multimodal-learning`
@@ -84,10 +84,10 @@ The directory structure of new project looks like this:
 
 Data can be downloaded from the below links
 
-1. [A tiny version of the dataset for debugging purposes](https://drive.google.com/file/d/1tOxKetKwSB8Begw9t73KidWYqaI8QO0T/view?usp=sharing)
-2. [Original](https://hatefulmemeschallenge.com/#about)
+1. [Original dataset hosted here](https://hatefulmemeschallenge.com/#about)
 
 Unzip and place it under `data/` directory.
+We are using the default split of data for all our experiments i.e `train.jsonl` for training, `dev_seen.jsonl` for validation and `test_seen.jsonl` for testing.  
 
 #### Fast Text Embeddings
 
