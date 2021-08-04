@@ -52,6 +52,7 @@ class HatefulMemesSemiDataModule(LightningDataModule):
 
         self.train_datapath = f"{data_dir}/hateful_memes/train.jsonl"
         self.val_datapath = f"{data_dir}/hateful_memes/dev_seen.jsonl"
+        self.test_datapath = f"{data_dir}/hateful_memes/test_seen.jsonl"
         self.img_dir = f"{data_dir}/hateful_memes"
         self.text_embedding_model = f"{data_dir}/text_embedding.bin"
 
@@ -81,6 +82,7 @@ class HatefulMemesSemiDataModule(LightningDataModule):
 
         self.train_samples = None
         self.val_samples = None
+        self.test_samples = None
 
     @property
     def num_classes(self) -> int:
@@ -109,6 +111,7 @@ class HatefulMemesSemiDataModule(LightningDataModule):
         labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
         val_idxs = np.array(range(self.val_samples.label.shape[0]))
         np.random.shuffle(val_idxs)
+        test_idxs = np.array(range(self.test_samples.label.shape[0]))
         self.data_train_labeled = HatefulMemesSemiDataset(
             data=self.train_samples,
             img_dir=self.img_dir,
@@ -131,6 +134,14 @@ class HatefulMemesSemiDataModule(LightningDataModule):
             data=self.val_samples,
             img_dir=self.img_dir,
             idxs=val_idxs,
+            image_transform=self.image_transforms,
+            text_transform=None,
+            text_encoder=self.text_encoder,
+        )
+        self.data_test = HatefulMemesSemiDataset(
+            data=self.test_samples,
+            img_dir=self.img_dir,
+            idxs=test_idxs,
             image_transform=self.image_transforms,
             text_transform=None,
             text_encoder=self.text_encoder,
@@ -169,14 +180,14 @@ class HatefulMemesSemiDataModule(LightningDataModule):
         )
 
     def test_dataloader(self):
-        # return DataLoader(
-        #     dataset=self.data_test,
-        #     batch_size=self.batch_size,
-        #     num_workers=self.num_workers,
-        #     pin_memory=self.pin_memory,
-        #     shuffle=False,
-        # )
-        raise NotImplementedError()
+        return DataLoader(
+            dataset=self.data_test,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+            collate_fn=collate,
+            shuffle=False,
+        )
 
     # TODO Clean it's config better
     def _x_u_split(self, labels):

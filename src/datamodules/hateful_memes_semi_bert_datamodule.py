@@ -54,6 +54,7 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
 
         self.train_datapath = f"{data_dir}/hateful_memes/train.jsonl"
         self.val_datapath = f"{data_dir}/hateful_memes/dev_seen.jsonl"
+        self.test_datapath = f"{data_dir}/hateful_memes/test_seen.jsonl"
         self.img_dir = f"{data_dir}/hateful_memes"
         self.text_embedding_model = f"{data_dir}/text_embedding.bin"
 
@@ -78,6 +79,7 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
 
         self.train_samples = None
         self.val_samples = None
+        self.test_samples = None
 
     @property
     def num_classes(self) -> int:
@@ -98,6 +100,7 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
         # Load training data
         self.train_samples = pd.read_json(self.train_datapath, lines=True)
         self.val_samples = pd.read_json(self.val_datapath, lines=True)
+        self.test_samples = pd.read_json(self.val_datapath, lines=True)
 
         # Get the labels from the dataframe
         train_labels = self.train_samples["label"].to_numpy().reshape(-1)
@@ -105,6 +108,7 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
         # Split the train data into into labeled and unlabeled indexes
         labeled_idxs, unlabeled_idxs = self._x_u_split(train_labels)
         val_idxs = np.array(range(self.val_samples.label.shape[0]))
+        test_idxs = np.array(range(self.test_samples.label.shape[0]))
         np.random.shuffle(val_idxs)
         self.data_train_labeled = HatefulMemesSemiBERTDataset(
             data=self.train_samples,
@@ -128,6 +132,14 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
             data=self.val_samples,
             img_dir=self.img_dir,
             idxs=val_idxs,
+            text_embedding_model=self.text_embedding_model,
+            text_embedding_type=self.text_embedding_type,
+        )
+
+        self.data_test = HatefulMemesSemiBERTDataset(
+            data=self.test_samples,
+            img_dir=self.img_dir,
+            idxs=test_idxs,
             text_embedding_model=self.text_embedding_model,
             text_embedding_type=self.text_embedding_type,
         )
@@ -167,14 +179,14 @@ class HatefulMemesSemiBERTDataModule(LightningDataModule):
         )
 
     def test_dataloader(self):
-        # return DataLoader(
-        #     dataset=self.data_test,
-        #     batch_size=self.batch_size,
-        #     num_workers=self.num_workers,
-        #     pin_memory=self.pin_memory,
-        #     shuffle=False,
-        # )
-        raise NotImplementedError()
+        return DataLoader(
+            dataset=self.data_test,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+            collate_fn=collate,
+            shuffle=False,
+        )
 
     # TODO Clean it's config better
     def _x_u_split(self, labels):
