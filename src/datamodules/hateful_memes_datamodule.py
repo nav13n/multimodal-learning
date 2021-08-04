@@ -35,7 +35,7 @@ class HatefulMemesDataModule(LightningDataModule):
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
-        num_labeled: int = None
+        num_labeled: int = None,
     ):
         super().__init__()
 
@@ -45,13 +45,14 @@ class HatefulMemesDataModule(LightningDataModule):
 
         self.train_datapath = f"{data_dir}/hateful_memes/train.jsonl"
         self.val_datapath = f"{data_dir}/hateful_memes/dev_seen.jsonl"
+        self.test_datapath = f"{data_dir}/hateful_memes/test_seen.jsonl"
         self.img_dir = f"{data_dir}/hateful_memes"
 
         self.train_val_test_split = train_val_test_split
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
-        self.num_labeled=num_labeled
+        self.num_labeled = num_labeled
 
         self.text_embedding_type = text_embedding_type
 
@@ -81,10 +82,16 @@ class HatefulMemesDataModule(LightningDataModule):
             self.img_dir,
             self.text_embedding_model,
             self.text_embedding_type,
-            num_labeled=self.num_labeled
+            num_labeled=self.num_labeled,
         )
         self.data_val = HatefulMemesDataset(
             self.val_datapath,
+            self.img_dir,
+            self.text_embedding_model,
+            self.text_embedding_type,
+        )
+        self.data_test = HatefulMemesDataset(
+            self.test_datapath,
             self.img_dir,
             self.text_embedding_model,
             self.text_embedding_type,
@@ -112,11 +119,11 @@ class HatefulMemesDataModule(LightningDataModule):
         )
 
     def test_dataloader(self):
-        # return DataLoader(
-        #     dataset=self.data_test,
-        #     batch_size=self.batch_size,
-        #     num_workers=self.num_workers,
-        #     pin_memory=self.pin_memory,
-        #     shuffle=False,
-        # )
-        raise NotImplementedError()
+        return DataLoader(
+            dataset=self.data_test,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+            collate_fn=collate,
+            shuffle=False,
+        )

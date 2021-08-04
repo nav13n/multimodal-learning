@@ -1,4 +1,6 @@
-from src.datamodules.datasets.hateful_memes_uniter_dataset import HatefulMemesUniterDataset
+from src.datamodules.datasets.hateful_memes_uniter_dataset import (
+    HatefulMemesUniterDataset,
+)
 from typing import Optional, Tuple
 
 from pytorch_lightning import LightningDataModule
@@ -33,7 +35,7 @@ class HatefulMemesUniterDataModule(LightningDataModule):
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
-        num_labeled: int = None
+        num_labeled: int = None,
     ):
         super().__init__()
 
@@ -43,6 +45,7 @@ class HatefulMemesUniterDataModule(LightningDataModule):
 
         self.train_datapath = f"{data_dir}/hateful_memes/train.jsonl"
         self.val_datapath = f"{data_dir}/hateful_memes/dev_seen.jsonl"
+        self.test_datapath = f"{data_dir}/hateful_memes/test_seen.jsonl"
         self.img_dir = f"{data_dir}/hateful_memes"
 
         self.train_val_test_split = train_val_test_split
@@ -83,7 +86,12 @@ class HatefulMemesUniterDataModule(LightningDataModule):
             self.text_embedding_model,
             self.text_embedding_type,
         )
-        # TODO: Set test dataset
+        self.data_test = HatefulMemesUniterDataset(
+            self.test_datapath,
+            self.img_dir,
+            self.text_embedding_model,
+            self.text_embedding_type,
+        )
 
     def train_dataloader(self):
         return DataLoader(
@@ -106,11 +114,11 @@ class HatefulMemesUniterDataModule(LightningDataModule):
         )
 
     def test_dataloader(self):
-        # return DataLoader(
-        #     dataset=self.data_test,
-        #     batch_size=self.batch_size,
-        #     num_workers=self.num_workers,
-        #     pin_memory=self.pin_memory,
-        #     shuffle=False,
-        # )
-        raise NotImplementedError()
+        return DataLoader(
+            dataset=self.data_test,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+            collate_fn=self.data_test.get_collate_function(),
+            shuffle=False,
+        )

@@ -281,6 +281,19 @@ class LanguageAndVisionConcat(LightningModule):
         self.log("val/auroc", auroc, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
+    def test_step(self, batch, batch_idx):
+        image, text, label = batch
+        logits, pred = self.model(text, image)
+
+        loss = self.loss_fn(pred, label)
+        acc = self.val_accuracy(pred, label)
+        auroc = self.val_auroc(pred, label)
+
+        self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("test/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/auroc", auroc, on_step=False, on_epoch=True, prog_bar=True)
+        return loss
+
     def configure_optimizers(self):
         return torch.optim.Adam(
             params=self.parameters(),
