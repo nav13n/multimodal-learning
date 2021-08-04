@@ -18,24 +18,31 @@ seed: 12345
 
 trainer:
   _target_: pytorch_lightning.Trainer
-  gpus: 1
-  min_epochs: 1
-  max_epochs: 10
+  gpus: 4
+  min_epochs: 5
+  max_epochs: 20
   gradient_clip_val: 0.5
   weights_summary: full
+  accumulate_grad_batches: 2
+  accelerator: ddp
+
   # resume_from_checkpoint: ${work_dir}/last.ckpt
+
+datamodule:
+  num_workers: 12
+  batch_size: 32 # Effective 64 with gradients accumulation
 
 callbacks:
   model_checkpoint:
     _target_: pytorch_lightning.callbacks.ModelCheckpoint
-    monitor: "val/acc"
+    monitor: "val/auroc"
     save_top_k: 2
     save_last: True
     mode: "max"
     dirpath: "checkpoints/"
-    filename: "concat-bert-{epoch:02d}"
+    filename: "uniter-{epoch:02d}"
   early_stopping:
     _target_: pytorch_lightning.callbacks.EarlyStopping
-    monitor: "val/acc"
+    monitor: "val/auroc"
     patience: 10
     mode: "max"

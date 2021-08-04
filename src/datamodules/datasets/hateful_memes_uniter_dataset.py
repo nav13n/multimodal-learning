@@ -54,12 +54,6 @@ class HatefulMemesUniterDataset(torch.utils.data.Dataset):
             lambda row: (Path(img_dir) / row.img), axis=1
         )
 
-        self.image_transform = transforms.Compose(
-            [
-                transforms.Resize(size=(224, 224)),
-                transforms.ToTensor(),
-            ]
-        )
         self.text_embedding_type = text_embedding_type
 
         self.text_transform = BertTokenizer.from_pretrained(text_embedding_model)
@@ -84,7 +78,7 @@ class HatefulMemesUniterDataset(torch.utils.data.Dataset):
         label = self.samples_frame.loc[idx, "label"]
 
         # Load pre computed features
-        image_features_path = '{}/image_features/d2_10-100/json/img/{}.json'.format(self.img_dir, str(img_id).zfill(5))
+        image_features_path = '{}/img_features/bua_vg_frcnn_resnet101/{}.json'.format(self.img_dir, str(img_id).zfill(5))
         
         feature_dict = None
         with open(image_features_path) as f:
@@ -93,27 +87,27 @@ class HatefulMemesUniterDataset(torch.utils.data.Dataset):
         img_h = int(feature_dict['img_h'])
         img_w = int(feature_dict['img_w'])
         num_boxes = int(feature_dict['num_boxes'])
-        boxes = torch.as_tensor(np.frombuffer(base64.decodebytes(feature_dict['boxes'].encode()),dtype=np.float32).reshape((int(feature_dict['num_boxes']), -1)))
-        img_features= torch.as_tensor(np.frombuffer(base64.decodebytes(feature_dict['features'].encode()),dtype=np.float32).reshape((int(feature_dict['num_boxes']), -1)))
-        objects_id = torch.as_tensor(np.frombuffer(base64.decodebytes(feature_dict['objects_id'].encode()),dtype=np.int64).reshape((int(feature_dict['num_boxes']), -1)))
-        objects_conf = torch.as_tensor(np.frombuffer(base64.decodebytes(feature_dict['objects_conf'].encode()),dtype=np.float32).reshape((int(feature_dict['num_boxes']), -1)))
+        
+        objects = feature_dict['objects']
+        boxes = torch.as_tensor(np.frombuffer(base64.decodebytes(feature_dict['boxes'].encode()),dtype=np.float32)).reshape((num_boxes, -1))
+        img_features= torch.as_tensor(np.frombuffer(base64.decodebytes(feature_dict['features'].encode()),dtype=np.float32).reshape(num_boxes, -1))
+        objects_id = torch.as_tensor(np.array(feature_dict['objects_id'],dtype=np.int64).reshape(num_boxes, -1))
+        objects_conf = torch.as_tensor(np.array(feature_dict['objects_conf'],dtype=np.float32).reshape(num_boxes, -1))
 
         # Normalize box coordinates
         boxes[:, [0, 2]] = boxes[:, [0, 2]] / img_h
         boxes[:, [1, 3]] = boxes[:, [1, 3]] / img_w
 
+        box_width =  boxes[:, 2:3] - boxes[:, 0:1]
+        box_height = boxes[:, 3:4] - boxes[:, 1:2]
+        box_area = box_width * box_height
+
         # Position features
-        img_pos_features = torch.cat([boxes,
-                                      # box width
-                                      boxes[:, 2:3] - boxes[:, 0:1],
-                                      # box height
-                                      boxes[:, 3:4] - boxes[:, 1:2],
-                                      # box area
-                                      (boxes[:, 2:3] - boxes[:, 0:1]) *
-                                      (boxes[:, 3:4] - boxes[:, 1:2])], dim=-1)
+        img_pos_features = torch.cat([boxes, box_width, box_height, box_area], dim=-1)
         
         img_id, label = torch.Tensor([img_id]).long().squeeze(), torch.Tensor([label]).long().squeeze()
         
+        text = [text, ' '.join(objects)] # Concatenate the detectron objects inferred from image to text as well
     
         return {'img_id':img_id, 'img_features': img_features, 'img_pos_features': img_pos_features, 'text': text, 'label': label}
 

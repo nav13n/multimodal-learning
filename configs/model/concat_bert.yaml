@@ -6,5 +6,5 @@ language_feature_dim: 128
 vision_feature_dim: 128
 fusion_output_size: 128
 model_type: concat_bert
-dropout_p: 0.25
+dropout_p: 0.1
 lr: 0.00001
