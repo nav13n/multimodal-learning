@@ -56,7 +56,7 @@ class ConcatModel(nn.Module):
             out_features=fusion_output_size,
         )
         self.fc = nn.Linear(in_features=fusion_output_size, out_features=num_classes)
-        self.dropout1 = nn.Dropout(dropout_p)
+        self.dropout = nn.Dropout(dropout_p)
 
     def forward(self, text, image):
         text_features = self.language_module(text)
@@ -194,11 +194,11 @@ class LanguageAndVisionConcat(LightningModule):
     ):
         super().__init__()
 
-        assert model_type in ["concat", "concat_bert"]
+        assert model_type in ["concat", "concat_bert", "unimodal_fasttext", "unimodal_bert", "unimodal_image"]
 
         self.save_hyperparameters()
 
-        if model_type == "unimodel_fasttext":
+        if model_type == "unimodal_fasttext":
 
             self.model = UnimodalFasttext(
                 embedding_dim,
@@ -207,7 +207,7 @@ class LanguageAndVisionConcat(LightningModule):
                 num_classes=num_classes,
             )
 
-        if model_type == "unimodel_bert":
+        elif model_type == "unimodal_bert":
 
             self.model = UnimodalBert(
                 embedding_dim,
@@ -215,17 +215,7 @@ class LanguageAndVisionConcat(LightningModule):
                 dropout_p,
                 num_classes=num_classes,
             )
-
-        if model_type == "unimodel_bert":
-
-            self.model = UnimodalBert(
-                embedding_dim,
-                language_feature_dim,
-                dropout_p,
-                num_classes=num_classes,
-            )
-
-        if model_type == "unimodel_image":
+        elif model_type == "unimodal_image":
             self.model = UnimodalImage(
                 backbone_output_dim,
                 vision_feature_dim,
@@ -233,7 +223,7 @@ class LanguageAndVisionConcat(LightningModule):
                 num_classes=num_classes,
             )
 
-        if model_type == "concat":
+        elif model_type == "concat":
             self.model = ConcatModel(
                 embedding_dim,
                 backbone_output_dim,

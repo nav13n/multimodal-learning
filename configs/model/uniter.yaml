@@ -3,4 +3,4 @@ _target_: src.models.HatefulMemesUniter
 pretrained_model_file:  ${data_dir}/pretrained/uniter-base.pt
 pretrained_model_config: ${work_dir}/configs/uniter/uniter-base.json
 dropout: 0.25
-lr: 0.00001
+lr: 0.00003
